@@ -21,12 +21,13 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ### Phase 0: Circuit Fundamentals (Week 1)
 - [x] Voltage (V), Current (I), Resistance (R), and Ohm's Law
-- [ ] Kirchhoff's Laws (KVL, KCL)
+- [x] Kirchhoff's Voltage Law (KVL) -- verified through LAB 01
+- [ ] Kirchhoff's Current Law (KCL)
 - [ ] Electrical Power (P = VI, P = I^2 R) and thermal dissipation
 - [ ] Series-parallel circuits and voltage dividers
 
 ### Phase 1: Semiconductor Basics (Week 1-2)
-- [ ] Diodes: Forward/Reverse bias, forward voltage (Vf)
+- [x] Diodes: Forward/Reverse bias, forward voltage (Vf) -- verified through LAB 01
 - [ ] N-Channel MOSFET: Vgs(th), Rds(on), gate charge (Qg)
 - [ ] Why an STM32 cannot drive a MOSFET directly
 
@@ -59,28 +60,70 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - Fundamentals of V, I, R and their relationship through Ohm's Law
 - Electrical power and thermal dissipation (P = I^2 R)
 - Hydraulic analogy for building intuition about circuits
+- Distinction between Ohmic and Non-Ohmic devices
 
 **Key Takeaways:**
 1. Voltage (V) represents the "pressure" that pushes charge through a circuit.
 2. Current (I) represents the actual flow rate of charge.
 3. Resistance (R) represents opposition to current flow.
-4. Ohm's Law (V = IR) is not merely a formula; it describes a physical equilibrium that always holds.
+4. Ohm's Law (V = IR) is not merely a formula; it describes a physical equilibrium that always holds for Ohmic devices.
 5. Thermal dissipation scales with the square of current: doubling the current quadruples the heat. This has critical implications for component selection and thermal management.
+6. Diodes are Non-Ohmic devices; their V-I relationship is non-linear and cannot be described by V = IR.
 
 **Activities:**
-- [ ] Simulate a diode + resistor circuit in Proteus (forward and reverse bias)
-- [ ] Measure the forward voltage (Vf) of a 1N4148 diode
-- [ ] Verify KVL: V_in = V_diode + V_resistor
+- [x] Studied Ohm's Law and power dissipation theory
+- [x] Discussed Ohmic vs Non-Ohmic device distinction
 
 **Open Questions:**
-- (none yet)
+- (none)
 
 **Resources Used:**
-- (to be added)
+- Instructor-led discussion on V, I, R fundamentals
 
 ---
 
-### Day 2 -- [Date]
+### Day 2 -- July 24, 2026
+
+**Topics Covered:**
+- Diode forward bias and reverse bias behavior
+- Kirchhoff's Voltage Law (KVL) verification in series circuits
+- Practical measurement of diode forward voltage (Vf)
+- Comparison between theoretical calculations and Proteus simulation results
+
+**Key Takeaways:**
+1. The forward voltage of a silicon diode (1N4148) is approximately 0.7V, but it varies slightly with current (typically 0.65V to 0.75V). For engineering calculations, treating Vf as constant at 0.7V is an acceptable approximation.
+2. Kirchhoff's Voltage Law holds true: V_source = V_diode + V_resistor in all forward-bias configurations tested.
+3. In reverse bias, the diode blocks current completely (I = 0), and the entire source voltage appears across the diode (V_diode = V_source).
+4. Increasing the source voltage or decreasing the resistance increases the current, which causes a slight increase in V_diode (due to the non-linear diode characteristic).
+5. Schottky diodes (e.g., 1N5819) have a lower forward voltage (~0.3V) compared to silicon diodes (~0.7V), making them more efficient for power conversion applications.
+
+**Activities:**
+- [x] Completed LAB 01: Diode Characteristics and KVL Verification in Proteus
+- [x] Experiment 1: Forward bias with R = 100 ohm, V_source = 5V
+- [x] Experiment 2: Varied resistance (100, 220, 470, 1000 ohm) with V_source = 5V
+- [x] Experiment 3: Varied source voltage (1, 3, 5, 9, 12V) with R = 100 ohm
+- [x] Experiment 4: Reverse bias test with V_source = 5V, R = 100 ohm
+- [x] Recorded all results and circuit diagrams in PDF format
+
+**Experimental Observations:**
+- Experiment 1: V_diode measured slightly different from ideal 0.7V due to simulation model characteristics. KVL verified with minor deviation.
+- Experiment 2: V_diode decreased slightly as resistance increased (lower current). This confirms the non-linear diode characteristic.
+- Experiment 3: V_diode increased slightly as source voltage increased (higher current). Again, confirms non-linear behavior.
+- Experiment 4: Reverse bias results matched theory perfectly: V_diode = 5.0V, V_resistor = 0V, I = 0mA.
+- Experiment 5: Skipped to accelerate progress (Schottky diode comparison).
+
+**Open Questions:**
+- What causes the slight deviation between ideal and simulated V_diode values? (Hypothesis: simulation model includes more detailed diode characteristics)
+- How does temperature affect diode forward voltage? (To be investigated later)
+
+**Resources Used:**
+- Proteus simulation software
+- LAB 01 guide (self-prepared)
+- Full results documented in: docs/learning/LAB_01_Diode_KVL.pdf
+
+---
+
+### Day 3 -- [Date]
 
 **Topics Covered:**
 - (to be filled after completion)
@@ -132,8 +175,8 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 | Phase | Topic | Started | Completed | Notes |
 |-------|-------|---------|-----------|-------|
-| 0 | Circuit Fundamentals | 2026-07-20 | - | Currently studying V, I, R |
-| 1 | Semiconductor Basics | - | - | |
+| 0 | Circuit Fundamentals | 2026-07-20 | - | Completed V, I, R, Ohm's Law, KVL. Next: KCL, Power |
+| 1 | Semiconductor Basics | 2026-07-24 | - | Completed diode LAB. Next: MOSFET |
 | 2 | Energy Storage (L, C) | - | - | |
 | 3 | DC-DC Converters | - | - | |
 | 4 | Practical Implementation | - | - | |
@@ -141,19 +184,6 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 ---
 
 ## Resource Library
-
-### Books
-- *Fundamentals of Power Electronics* by Robert W. Erickson (Chapters 3 and 6)
-- (to be added)
-
-### Videos
-- Power Electronics by Sam Ben-Yaakov (YouTube)
-- TI Precision Labs: Power Management (YouTube)
-- (to be added)
-
-### Articles and Application Notes
-- SLYT405: Non-Isolated DC/DC Converters (Texas Instruments)
-- (to be added)
 
 ### Tools
 - **Proteus** -- Circuit simulation (assigned by instructor)
@@ -178,4 +208,4 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 ---
 
-*Last updated: July 20, 2026*
+*Last updated: July 24, 2026*
