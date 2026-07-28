@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Active Learning
+**Current Status:** Phase 0 Completed. Proceeding to Phase 1.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026
 
@@ -22,9 +22,9 @@ The learning sequence is designed for someone with a weak foundation who needs t
 ### Phase 0: Circuit Fundamentals (Week 1)
 - [x] Voltage (V), Current (I), Resistance (R), and Ohm's Law
 - [x] Kirchhoff's Voltage Law (KVL) -- verified through LAB 01
-- [ ] Kirchhoff's Current Law (KCL)
-- [ ] Electrical Power (P = VI, P = I^2 R) and thermal dissipation
-- [ ] Series-parallel circuits and voltage dividers
+- [x] Kirchhoff's Current Law (KCL) -- verified through analytical problem solving
+- [x] Electrical Power (P = VI, P = I^2 R) and thermal dissipation
+- [x] Series-parallel circuits and voltage dividers
 
 ### Phase 1: Semiconductor Basics (Week 1-2)
 - [x] Diodes: Forward/Reverse bias, forward voltage (Vf) -- verified through LAB 01
@@ -123,22 +123,34 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
-### Day 3 -- [Date]
+### Day 3 -- July 28, 2026
 
 **Topics Covered:**
-- (to be filled after completion)
+- Kirchhoff's Current Law (KCL) and node analysis.
+- Electrical power dissipation and thermal management (P = I^2 R).
+- Series and parallel circuit analysis.
+- Voltage divider design for microcontroller ADC interfacing.
 
 **Key Takeaways:**
-- (to be filled after completion)
+1. KCL is a direct application of the conservation of charge: the sum of currents entering a node equals the sum of currents leaving it.
+2. Thermal dissipation scales with the square of the current (I^2). Doubling the current quadruples the heat, making low Rds(on) MOSFETs critical for high-current applications.
+3. Synchronous rectification (using a MOSFET instead of a diode) drastically reduces conduction losses (e.g., 25x reduction in a sample calculation), validating the choice of a synchronous topology for this project.
+4. Voltage dividers are essential for scaling high converter voltages (e.g., 24V) down to safe levels for the STM32 ADC (max 3.3V).
+5. Practical design rule: Two identical resistors in parallel yield exactly half the resistance value, simplifying mental calculations during circuit design.
 
 **Activities:**
-- [ ] (planned activities)
+- [x] Solved analytical KCL node problems to verify current flow logic.
+- [x] Calculated power dissipation and junction temperatures for hypothetical MOSFETs.
+- [x] Compared diode vs. MOSFET conduction losses to validate the need for synchronous topology.
+- [x] Designed and calculated a voltage divider network for a 4.2V Li-ion battery sensing circuit.
+- [x] Solved mixed series-parallel circuit problems.
 
 **Open Questions:**
-- (to be filled)
+- How does the input impedance of the STM32 ADC affect the accuracy of a high-resistance voltage divider? (To be investigated in Phase 4).
 
 **Resources Used:**
-- (to be added)
+- First principles analytical problem solving (paper and pencil).
+- Instructor-led guided calculations.
 
 ---
 
@@ -175,8 +187,8 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 | Phase | Topic | Started | Completed | Notes |
 |-------|-------|---------|-----------|-------|
-| 0 | Circuit Fundamentals | 2026-07-20 | - | Completed V, I, R, Ohm's Law, KVL. Next: KCL, Power |
-| 1 | Semiconductor Basics | 2026-07-24 | - | Completed diode LAB. Next: MOSFET |
+| 0 | Circuit Fundamentals | 2026-07-20 | 2026-07-28 | Fully completed. Ready for Phase 1 (MOSFETs). |
+| 1 | Semiconductor Basics | 2026-07-24 | - | Diode LAB complete. Next: MOSFET parameters. |
 | 2 | Energy Storage (L, C) | - | - | |
 | 3 | DC-DC Converters | - | - | |
 | 4 | Practical Implementation | - | - | |
@@ -208,4 +220,4 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 ---
 
-*Last updated: July 24, 2026*
+*Last updated: July 28, 2026*
