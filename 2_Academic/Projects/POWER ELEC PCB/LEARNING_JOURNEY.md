@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Phase 0 Completed. Proceeding to Phase 1.
+**Current Status:** Phase 1 & 2 Core Concepts Completed. Proceeding to Component Selection and Simulation.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026
 
@@ -32,10 +32,10 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - [ ] Why an STM32 cannot drive a MOSFET directly
 
 ### Phase 2: Energy Storage Components (Week 2)
-- [ ] Inductor (L): V = L * di/dt, "current preserver"
-- [ ] Capacitor (C): I = C * dv/dt, "voltage preserver"
-- [ ] Time constants (tau = L/R, tau = RC)
-- [ ] Sizing L and C based on specified ripple
+- [x] Inductor (L): V = L * di/dt, "current preserver"
+- [x] Capacitor (C): I = C * dv/dt, "voltage preserver"
+- [x] Time constants and ripple trade-offs
+- [x] Sizing L and C based on specified ripple and worst-case scenarios
 
 ### Phase 3: DC-DC Converter Principles (Week 2-3)
 - [ ] PWM and duty cycle
@@ -91,30 +91,18 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - Comparison between theoretical calculations and Proteus simulation results
 
 **Key Takeaways:**
-1. The forward voltage of a silicon diode (1N4148) is approximately 0.7V, but it varies slightly with current (typically 0.65V to 0.75V). For engineering calculations, treating Vf as constant at 0.7V is an acceptable approximation.
+1. The forward voltage of a silicon diode (1N4148) is approximately 0.7V, but it varies slightly with current. Treating Vf as constant at 0.7V is an acceptable approximation for engineering calculations.
 2. Kirchhoff's Voltage Law holds true: V_source = V_diode + V_resistor in all forward-bias configurations tested.
-3. In reverse bias, the diode blocks current completely (I = 0), and the entire source voltage appears across the diode (V_diode = V_source).
-4. Increasing the source voltage or decreasing the resistance increases the current, which causes a slight increase in V_diode (due to the non-linear diode characteristic).
-5. Schottky diodes (e.g., 1N5819) have a lower forward voltage (~0.3V) compared to silicon diodes (~0.7V), making them more efficient for power conversion applications.
+3. In reverse bias, the diode blocks current completely (I = 0), and the entire source voltage appears across the diode.
+4. Schottky diodes (e.g., 1N5819) have a lower forward voltage (~0.3V), making them more efficient for power conversion applications.
 
 **Activities:**
 - [x] Completed LAB 01: Diode Characteristics and KVL Verification in Proteus
-- [x] Experiment 1: Forward bias with R = 100 ohm, V_source = 5V
-- [x] Experiment 2: Varied resistance (100, 220, 470, 1000 ohm) with V_source = 5V
-- [x] Experiment 3: Varied source voltage (1, 3, 5, 9, 12V) with R = 100 ohm
-- [x] Experiment 4: Reverse bias test with V_source = 5V, R = 100 ohm
 - [x] Recorded all results and circuit diagrams in PDF format
 
 **Experimental Observations:**
-- Experiment 1: V_diode measured slightly different from ideal 0.7V due to simulation model characteristics. KVL verified with minor deviation.
-- Experiment 2: V_diode decreased slightly as resistance increased (lower current). This confirms the non-linear diode characteristic.
-- Experiment 3: V_diode increased slightly as source voltage increased (higher current). Again, confirms non-linear behavior.
-- Experiment 4: Reverse bias results matched theory perfectly: V_diode = 5.0V, V_resistor = 0V, I = 0mA.
-- Experiment 5: Skipped to accelerate progress (Schottky diode comparison).
-
-**Open Questions:**
-- What causes the slight deviation between ideal and simulated V_diode values? (Hypothesis: simulation model includes more detailed diode characteristics)
-- How does temperature affect diode forward voltage? (To be investigated later)
+- Reverse bias results matched theory perfectly: V_diode = 5.0V, V_resistor = 0V, I = 0mA.
+- V_diode decreased slightly as resistance increased (lower current), confirming non-linear behavior.
 
 **Resources Used:**
 - Proteus simulation software
@@ -133,24 +121,48 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 **Key Takeaways:**
 1. KCL is a direct application of the conservation of charge: the sum of currents entering a node equals the sum of currents leaving it.
-2. Thermal dissipation scales with the square of the current (I^2). Doubling the current quadruples the heat, making low Rds(on) MOSFETs critical for high-current applications.
-3. Synchronous rectification (using a MOSFET instead of a diode) drastically reduces conduction losses (e.g., 25x reduction in a sample calculation), validating the choice of a synchronous topology for this project.
-4. Voltage dividers are essential for scaling high converter voltages (e.g., 24V) down to safe levels for the STM32 ADC (max 3.3V).
-5. Practical design rule: Two identical resistors in parallel yield exactly half the resistance value, simplifying mental calculations during circuit design.
+2. Thermal dissipation scales with the square of the current (I^2). Doubling the current quadruples the heat, making low Rds(on) MOSFETs critical.
+3. Synchronous rectification drastically reduces conduction losses, validating the choice of a synchronous topology for this project.
+4. Voltage dividers are essential for scaling high converter voltages down to safe levels for the STM32 ADC (max 3.3V).
 
 **Activities:**
 - [x] Solved analytical KCL node problems to verify current flow logic.
 - [x] Calculated power dissipation and junction temperatures for hypothetical MOSFETs.
-- [x] Compared diode vs. MOSFET conduction losses to validate the need for synchronous topology.
 - [x] Designed and calculated a voltage divider network for a 4.2V Li-ion battery sensing circuit.
-- [x] Solved mixed series-parallel circuit problems.
-
-**Open Questions:**
-- How does the input impedance of the STM32 ADC affect the accuracy of a high-resistance voltage divider? (To be investigated in Phase 4).
 
 **Resources Used:**
 - First principles analytical problem solving (paper and pencil).
 - Instructor-led guided calculations.
+
+---
+
+### Day 4 -- August 5, 2026
+
+**Topics Covered:**
+- Role of Inductor (L) and Capacitor (C) in smoothing PWM square waves into stable DC.
+- Understanding Ripple (Delta V_out and Delta I_L) and its design trade-offs.
+- Duty Cycle calculations for Buck (D = V_out / V_in) and Boost (D = 1 - V_in / V_out) modes.
+- Worst-case scenario analysis for component sizing.
+- Real-world component selection criteria (I_sat, DCR, ESR, Voltage Rating derating).
+
+**Key Takeaways:**
+1. L resists changes in current, while C resists changes in voltage. Together, they filter high-frequency switching into a stable DC output with minimal ripple.
+2. A 30% ripple current (Delta I_L) is the industry-standard trade-off, balancing component size/cost against efficiency and transient response.
+3. Worst-case ripple in Buck mode occurs at maximum V_in (20V). Components must be sized for this condition to ensure safe operation at lower input voltages.
+4. Calculated values (L = 80uH, C = 15uF) must be rounded up to standard values (L = 100uH, C = 4x22uF MLCC + 100uF Electrolytic) to provide a necessary safety margin.
+5. Real-world constraints dictate selection: Inductor Saturation Current (I_sat) must be >= 3A to prevent core saturation during load steps, and Capacitor Voltage Rating must be >= 25V (2x V_out) to handle voltage spikes and aging.
+
+**Activities:**
+- [x] Analyzed the "why" behind L and C sizing formulas, moving beyond rote calculation to first-principles understanding.
+- [x] Calculated Duty Cycle, L, and C based on target specifications (V_in = 6-20V, V_out = 12V, I_out = 2A, f_sw = 100kHz).
+- [x] Documented component selection criteria and trade-offs in personal study notes (Start Phase 1.pdf).
+
+**Open Questions:**
+- How to properly implement the bootstrap circuit for the high-side N-Channel MOSFETs in the actual hardware? (To be addressed in Phase 4).
+
+**Resources Used:**
+- Self-prepared summary notes and first-principles analysis (Start Phase 1.pdf).
+- Instructor-led guided breakdown of component sizing logic.
 
 ---
 
@@ -187,9 +199,9 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 | Phase | Topic | Started | Completed | Notes |
 |-------|-------|---------|-----------|-------|
-| 0 | Circuit Fundamentals | 2026-07-20 | 2026-07-28 | Fully completed. Ready for Phase 1 (MOSFETs). |
+| 0 | Circuit Fundamentals | 2026-07-20 | 2026-07-28 | Fully completed. Solid foundation established. |
 | 1 | Semiconductor Basics | 2026-07-24 | - | Diode LAB complete. Next: MOSFET parameters. |
-| 2 | Energy Storage (L, C) | - | - | |
+| 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-05 | Sizing, ripple trade-offs, and selection criteria understood. |
 | 3 | DC-DC Converters | - | - | |
 | 4 | Practical Implementation | - | - | |
 
@@ -220,4 +232,4 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 ---
 
-*Last updated: July 28, 2026*
+*Last updated: August 5, 2026*
