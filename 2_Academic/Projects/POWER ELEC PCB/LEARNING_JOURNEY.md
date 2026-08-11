@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Phase 1 & 2 Core Concepts Completed. Proceeding to Component Selection and Simulation.
+**Current Status:** Component Selection Complete. Proceeding to Schematic Capture in EasyEDA.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026
 
@@ -28,8 +28,8 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ### Phase 1: Semiconductor Basics (Week 1-2)
 - [x] Diodes: Forward/Reverse bias, forward voltage (Vf) -- verified through LAB 01
-- [ ] N-Channel MOSFET: Vgs(th), Rds(on), gate charge (Qg)
-- [ ] Why an STM32 cannot drive a MOSFET directly
+- [x] N-Channel MOSFET: Vgs(th), Rds(on), gate charge (Qg) -- verified via IRLZ44N datasheet
+- [x] Why an STM32 cannot drive a MOSFET directly -- understood via IR2104 gate driver selection
 
 ### Phase 2: Energy Storage Components (Week 2)
 - [x] Inductor (L): V = L * di/dt, "current preserver"
@@ -38,15 +38,15 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - [x] Sizing L and C based on specified ripple and worst-case scenarios
 
 ### Phase 3: DC-DC Converter Principles (Week 2-3)
-- [ ] PWM and duty cycle
-- [ ] Buck Converter: operating principle, waveforms, equations
-- [ ] Boost Converter: operating principle, waveforms, equations
-- [ ] 4-Switch Buck-Boost: three operating modes
+- [x] PWM and duty cycle
+- [x] Buck Converter: operating principle, waveforms, equations
+- [x] Boost Converter: operating principle, waveforms, equations
+- [x] 4-Switch Buck-Boost: three operating modes
 - [ ] Volt-second balance and charge balance
 
 ### Phase 4: Practical Implementation (Week 3-4)
-- [ ] Gate drivers: bootstrap circuits, dead-time, shoot-through
-- [ ] Reading datasheets (MOSFET, inductor, capacitor)
+- [x] Gate drivers: bootstrap circuits, dead-time, shoot-through -- IR2104S selected
+- [x] Reading datasheets (MOSFET, inductor, capacitor) -- verified 4 main components
 - [ ] PCB layout rules (high di/dt loops, grounding strategy)
 - [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks
 
@@ -166,20 +166,47 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 5 -- August 11, 2026
+
+**Topics Covered:**
+- Finalized component selection based on datasheet verification and real-world availability.
+- Trade-off analysis for Inductor selection (prioritizing I_sat and DCR over nominal inductance value).
+- Current sensing calculation and gain verification for STM32 ADC compatibility.
+- Critical self-reflection on design workflow, datasheet literacy, and time management.
+
+**Key Takeaways:**
+1. **Design for Availability vs. Ideal Specs:** Initially targeted a 100uH inductor, but realized that rigid theoretical calculations often clash with real-world component availability and physical size constraints. Pivoted to a flexible strategy: identify available components with critical constraints (like I_sat >= 3A and low DCR) first, then recalculate and adapt flexible components (like R and C). This saved significant time and streamlined the BOM finalization.
+2. **Component Sourcing Strategy:** Lack of experience led to a top-down design approach (calculate ideal values -> search for parts). The optimal workflow is bottom-up: verify critical component availability and datasheet constraints first, then adapt the circuit. Next time, I will dive into datasheets and part availability before deep theoretical calculations.
+3. **Datasheet Literacy:** Felt overwhelmed by the sheer amount of jargon in datasheets, focusing only on immediate specs. Acknowledged the need to develop a systematic approach to reading datasheets (understanding test conditions, graphs, and secondary parameters) in future iterations.
+4. **MOSFET Selection:** Confirmed IRLZ44N is ideal due to its Logic-Level V_GS(th) (1-2V) and low R_DS(on) (22 mOhm at 4V), ensuring it can be driven effectively by the 3.3V-compatible IR2104 gate driver.
+5. **Gate Driver:** IR2104S (SOIC-8) is confirmed. It features built-in 520ns dead-time (preventing shoot-through) and accepts 3.3V logic directly from the STM32.
+6. **Inductor Compromise:** Selected Coilcraft MSS1260-473ML (47 uH) instead of the calculated 100 uH. Reason: The 100 uH variant had insufficient saturation current (I_sat < 3A) and high DCR. The 47 uH variant guarantees I_sat = 3.38A and lower DCR (89 mOhm), which is safer for a 2A load, accepting a slightly higher ripple that can be managed by the output capacitors.
+7. **Current Sensor:** Verified INA240A2 (Gain = 50 V/V). With a 10 mOhm shunt resistor at 2A max load, the output voltage will be 2A * 0.01 Ohm * 50 = 1.0V. This perfectly utilizes the lower third of the STM32's 3.3V ADC range, leaving ample headroom for overcurrent detection.
+
+**Mistakes and Lessons Learned:**
+- **Mistake:** Rushed into thermal and power calculations (P = I^2 R, T_junction) for the MOSFET without fully understanding its fundamental operating parameters first. This led to confusion when reading the V_GS specifications in the IRLZ44N datasheet (confusing Absolute Maximum Rating of +/-16V with the Operating Condition of 4-5V).
+- **Lesson:** Always establish a solid understanding of basic operating parameters (V_GS(th), V_GS(max), R_DS(on) test conditions) before moving on to secondary calculations like power dissipation and thermal management.
+
+**Activities:**
+- [x] Reviewed and cross-referenced datasheets for IRLZ44N, IR2104S, INA240A2, and STM32F401.
+- [x] Finalized the Bill of Materials (BOM) with specific part numbers.
+- [x] Gathered all physical components for the project.
+- [x] Conducted a self-review of the design process to identify workflow bottlenecks.
+
+**Next Steps:**
+- Begin Schematic Capture in EasyEDA.
+- Focus on correct pinout mapping for IR2104S bootstrap circuit and INA240A2 shunt placement.
+
+---
+
 ## Issues and Solutions Log
 
 A record of problems encountered and their resolutions, to prevent repeating the same mistakes.
 
 | # | Date | Problem | Root Cause | Resolution | Status |
 |---|------|---------|------------|------------|--------|
-| 1 | - | (none yet) | - | - | - |
-
-**Example Entry:**
-
-| # | Date | Problem | Root Cause | Resolution | Status |
-|---|------|---------|------------|------------|--------|
-| 1 | 2026-07-25 | MOSFET failed during testing | Missing dead-time in PWM signal | Added 100 ns dead-time in TIM1 configuration | Resolved |
-| 2 | 2026-07-27 | Output ripple exceeded specification | High ESR of output capacitor | Replaced with multiple MLCC capacitors in parallel | Resolved |
+| 1 | 2026-08-11 | Confused V_GS(max) with V_GS(th) in IRLZ44N Datasheet | Rushed into thermal calculations before understanding basic operating parameters | Clarified that +/-16V is absolute max rating, while 4-5V is the operating condition for low Rds(on) | Resolved |
+| 2 | 2026-08-11 | 100uH Inductor (MSS1260-104ML) had insufficient I_sat (1.88A) | Rigid adherence to calculated theoretical values without checking real-world availability | Pivoted to MSS1260-473ML (47uH, I_sat = 3.38A) and accepted slightly higher ripple | Resolved |
 
 ---
 
@@ -187,11 +214,11 @@ A record of problems encountered and their resolutions, to prevent repeating the
 
 Documented mistakes intended to serve as reminders for the author and as guidance for others.
 
-### Mistake #1: [Title]
-**What was done:**
-**Result:**
-**What should have been done:**
-**Lesson learned:**
+### Mistake #1: Confusing Absolute Maximum Ratings with Operating Conditions
+**What was done:** Read the IRLZ44N datasheet and saw V_GS = +/-16V, then confused this with the voltage needed to drive the MOSFET.
+**Result:** Temporary confusion about whether STM32 (3.3V) + IR2104 could properly drive the MOSFET.
+**What should have been done:** First identify the difference between Absolute Maximum Ratings (limits that destroy the device) and Operating Conditions (values for proper function), then look at R_DS(on) test conditions.
+**Lesson learned:** Always read the "Recommended Operating Conditions" and "Static Electrical Characteristics" tables before jumping to conclusions from the "Absolute Maximum Ratings" table.
 
 ---
 
@@ -200,14 +227,25 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 | Phase | Topic | Started | Completed | Notes |
 |-------|-------|---------|-----------|-------|
 | 0 | Circuit Fundamentals | 2026-07-20 | 2026-07-28 | Fully completed. Solid foundation established. |
-| 1 | Semiconductor Basics | 2026-07-24 | - | Diode LAB complete. Next: MOSFET parameters. |
-| 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-05 | Sizing, ripple trade-offs, and selection criteria understood. |
-| 3 | DC-DC Converters | - | - | |
-| 4 | Practical Implementation | - | - | |
+| 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
+| 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
+| 3 | DC-DC Converters | 2026-08-05 | - | PWM, Buck, Boost, 4-Switch modes understood. Volt-second balance pending. |
+| 4 | Practical Implementation | 2026-08-11 | - | Datasheets read. Gate driver selected. PCB layout and firmware pending. |
 
 ---
 
 ## Resource Library
+
+### Datasheets
+- **IRLZ44N** -- N-Channel Logic Level MOSFET (docs/datasheets/IRLZ44N-MOSFET.pdf)
+- **IR2104S** -- Half-Bridge Gate Driver with Dead-time (docs/datasheets/IR2104(S)-Half-Bridge Gate.PDF)
+- **INA240A2** -- Current Shunt Monitor, 50 V/V Gain (docs/datasheets/INA240-Current Sensor.PDF)
+- **STM32F401** -- ARM Cortex-M4 MCU with FPU (docs/datasheets/STM32F401CD-STM32.PDF)
+- **MSS1260** -- Coilcraft SMT Power Inductors (docs/datasheets/MSS1260-473ML.pdf)
+
+### Study Notes
+- **Start Phase 1** -- Personal notes on L/C sizing and ripple trade-offs (docs/learning/Start Phase 1.pdf)
+- **LAB 01** -- Diode Characteristics and KVL Verification (docs/learning/LAB_01_Diode_KVL.pdf)
 
 ### Tools
 - **Proteus** -- Circuit simulation (assigned by instructor)
@@ -232,4 +270,4 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 ---
 
-*Last updated: August 5, 2026*
+*Last updated: August 11, 2026*
