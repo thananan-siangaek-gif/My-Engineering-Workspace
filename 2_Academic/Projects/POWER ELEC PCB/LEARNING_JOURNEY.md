@@ -9,9 +9,9 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Component Selection Complete. Proceeding to Schematic Capture in EasyEDA.
+**Current Status:** Component Selection and Datasheet Verification Complete. Entering Schematic Capture Phase.
 **Started:** July 20, 2026
-**Target Deadline:** August 17, 2026
+**Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
 ---
 
@@ -199,6 +199,42 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 6 -- August 17, 2026
+
+**Topics Covered:**
+- Comprehensive review and cross-verification of all four primary component datasheets.
+- Final confirmation of system compatibility between STM32F401, IR2104S, IRLZ44N, and INA240A2.
+- Mock deadline retrospective: evaluating the 1-month sprint plan and identifying bottlenecks.
+
+**Key Takeaways:**
+1. **STM32F401 Verification:** Confirmed the MCU has one Advanced-Control Timer (TIM1) with complementary PWM outputs and programmable dead-time -- exactly what is needed to drive the IR2104S safely. The 12-bit ADC (2.4 MSPS) is sufficient for voltage and current sensing via DMA.
+2. **IR2104S Verification:** Confirmed logic input threshold (V_IH min = 3V) is compatible with STM32's 3.3V logic output. Built-in dead-time of 520ns (typical) is sufficient to prevent shoot-through for IRLZ44N (which has typical turn-on/turn-off times in the tens of nanoseconds range). Undervoltage lockout (V_CC UV+ = 8.9V) ensures the driver will not operate with insufficient gate drive voltage.
+3. **IRLZ44N Verification:** Confirmed Logic-Level MOSFET with V_GS(th) = 1-2V and R_DS(on) = 22 mOhm at V_GS = 4V. Total gate charge Q_g = 47nC is well within the drive capability of IR2104S (I_O+ = 130mA, I_O- = 270mA), ensuring fast switching transitions and minimal switching losses.
+4. **INA240A2 Verification:** Confirmed enhanced PWM rejection (93-dB AC CMRR at 50 kHz) is critical for accurate current sensing in a 100 kHz switching converter. Wide common-mode range (-4V to 80V) allows flexible high-side or low-side shunt placement.
+5. **System-Level Compatibility:** The entire signal chain is verified: STM32 (3.3V PWM) -> IR2104S (boosts to 10-15V gate drive with dead-time) -> IRLZ44N (fully enhanced at 4-5V) -> Power Stage. Current sensing via INA240A2 (1.0V output at 2A) feeds back into STM32 ADC safely.
+6. **Mock Deadline Retrospective:** The 1-month sprint from July 20 to August 17 was intentionally aggressive to stress-test the learning plan. While the full prototype was not completed, the foundational knowledge (Phase 0-2) and component selection (Phase 1, 4) were solidified. The actual university deadline is November 1, 2026, providing ~2.5 months for schematic capture, PCB layout, fabrication, firmware, and bring-up.
+
+**Activities:**
+- [x] Re-read and annotated key sections of STM32F401CD datasheet (TIM1, ADC, pinout).
+- [x] Re-read and annotated key sections of IR2104S datasheet (timing, logic thresholds, UVLO).
+- [x] Re-read and annotated key sections of IRLZ44N datasheet (V_GS(th), R_DS(on), Q_g, SOA).
+- [x] Re-read and annotated key sections of INA240A2 datasheet (PWM rejection, gain, common-mode range).
+- [x] Cross-referenced all four datasheets to confirm system-level compatibility.
+- [x] Conducted mock deadline retrospective and drafted revised execution plan for Aug 18 - Nov 1.
+
+**Open Questions:**
+- What is the optimal shunt resistor placement (high-side vs. low-side) for the INA240A2 in a 4-switch topology? (To be resolved during schematic capture).
+- What bootstrap capacitor value is optimal for 100 kHz switching with IRLZ44N (Q_g = 47nC)? (To be calculated during schematic capture).
+
+**Resources Used:**
+- STM32F401CD Datasheet (STMicroelectronics, DocID025644 Rev 3)
+- IR2104(S) Datasheet (International Rectifier, Data Sheet No. PD60046-S)
+- IRLZ44N Datasheet (International Rectifier / Infineon)
+- INA240 Datasheet (Texas Instruments, SBOS662)
+- Start Phase 1.pdf (personal study notes)
+
+---
+
 ## Issues and Solutions Log
 
 A record of problems encountered and their resolutions, to prevent repeating the same mistakes.
@@ -207,6 +243,7 @@ A record of problems encountered and their resolutions, to prevent repeating the
 |---|------|---------|------------|------------|--------|
 | 1 | 2026-08-11 | Confused V_GS(max) with V_GS(th) in IRLZ44N Datasheet | Rushed into thermal calculations before understanding basic operating parameters | Clarified that +/-16V is absolute max rating, while 4-5V is the operating condition for low Rds(on) | Resolved |
 | 2 | 2026-08-11 | 100uH Inductor (MSS1260-104ML) had insufficient I_sat (1.88A) | Rigid adherence to calculated theoretical values without checking real-world availability | Pivoted to MSS1260-473ML (47uH, I_sat = 3.38A) and accepted slightly higher ripple | Resolved |
+| 3 | 2026-08-17 | Unclear if STM32 3.3V logic can reliably drive IR2104S | Did not verify logic input thresholds against MCU output levels | Verified V_IH min = 3V for IR2104S; STM32 VOH min = 2.4V at 8mA (TTL) or VDD-0.4V (CMOS) -- both sufficient | Resolved |
 
 ---
 
@@ -220,6 +257,12 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 **What should have been done:** First identify the difference between Absolute Maximum Ratings (limits that destroy the device) and Operating Conditions (values for proper function), then look at R_DS(on) test conditions.
 **Lesson learned:** Always read the "Recommended Operating Conditions" and "Static Electrical Characteristics" tables before jumping to conclusions from the "Absolute Maximum Ratings" table.
 
+### Mistake #2: Top-Down Design Without Checking Availability
+**What was done:** Calculated ideal component values (100uH inductor) first, then searched for parts.
+**Result:** Wasted time discovering the ideal part did not meet I_sat requirements or was unavailable.
+**What should have been done:** Check component availability and critical constraints (I_sat, DCR, package) first, then adapt calculations.
+**Lesson learned:** Bottom-up design (verify parts first, then calculate) is more efficient for time-constrained projects.
+
 ---
 
 ## Progress Tracker
@@ -229,29 +272,30 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 | 0 | Circuit Fundamentals | 2026-07-20 | 2026-07-28 | Fully completed. Solid foundation established. |
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
-| 3 | DC-DC Converters | 2026-08-05 | - | PWM, Buck, Boost, 4-Switch modes understood. Volt-second balance pending. |
-| 4 | Practical Implementation | 2026-08-11 | - | Datasheets read. Gate driver selected. PCB layout and firmware pending. |
+| 3 | DC-DC Converters | 2026-08-05 | 2026-08-17 | PWM, Buck, Boost, 4-Switch modes understood. Volt-second balance pending. |
+| 4 | Practical Implementation | 2026-08-11 | 2026-08-17 | All 4 main component datasheets verified. System compatibility confirmed. Schematic capture next. |
 
 ---
 
 ## Resource Library
 
 ### Datasheets
-- **IRLZ44N** -- N-Channel Logic Level MOSFET (docs/datasheets/IRLZ44N-MOSFET.pdf)
-- **IR2104S** -- Half-Bridge Gate Driver with Dead-time (docs/datasheets/IR2104(S)-Half-Bridge Gate.PDF)
-- **INA240A2** -- Current Shunt Monitor, 50 V/V Gain (docs/datasheets/INA240-Current Sensor.PDF)
-- **STM32F401** -- ARM Cortex-M4 MCU with FPU (docs/datasheets/STM32F401CD-STM32.PDF)
-- **MSS1260** -- Coilcraft SMT Power Inductors (docs/datasheets/MSS1260-473ML.pdf)
+- **IRLZ44N** -- N-Channel Logic Level MOSFET, TO-220 (docs/datasheets/IRLZ44N-MOSFET.pdf)
+- **IR2104S** -- Half-Bridge Gate Driver with 520ns Dead-time, SOIC-8 (docs/datasheets/IR2104(S)-Half-Bridge Gate.PDF)
+- **INA240A2** -- Current Shunt Monitor, 50 V/V Gain, Enhanced PWM Rejection, TSSOP-8 (docs/datasheets/INA240-Current Sensor.PDF)
+- **STM32F401CD** -- ARM Cortex-M4 MCU, 84 MHz, 384KB Flash, 96KB RAM, LQFP-64 (docs/datasheets/STM32F401CD-STM32.PDF)
+- **MSS1260-473ML** -- Coilcraft Shielded SMT Power Inductor, 47uH, I_sat = 3.38A (docs/datasheets/MSS1260-473ML.pdf)
 
 ### Study Notes
-- **Start Phase 1** -- Personal notes on L/C sizing and ripple trade-offs (docs/learning/Start Phase 1.pdf)
-- **LAB 01** -- Diode Characteristics and KVL Verification (docs/learning/LAB_01_Diode_KVL.pdf)
+- **Start Phase 1** -- Personal notes on L/C sizing, ripple trade-offs, and worst-case analysis (docs/learning/Start Phase 1.pdf)
+- **LAB 01** -- Diode Characteristics and KVL Verification in Proteus (docs/learning/LAB_01_Diode_KVL.pdf)
 
 ### Tools
 - **Proteus** -- Circuit simulation (assigned by instructor)
 - **LTspice** -- Advanced simulation (backup)
-- **EasyEDA** -- PCB design
+- **EasyEDA** -- PCB design and schematic capture
 - **STM32CubeIDE** -- Firmware development
+- **JLCPCB** -- PCB fabrication and assembly
 
 ---
 
@@ -270,4 +314,4 @@ Documented mistakes intended to serve as reminders for the author and as guidanc
 
 ---
 
-*Last updated: August 11, 2026*
+*Last updated: August 17, 2026*
