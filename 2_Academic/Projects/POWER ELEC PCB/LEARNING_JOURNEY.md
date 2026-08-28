@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Component Selection and Datasheet Verification Complete. Entering Schematic Capture Phase.
+**Current Status:** Component Selection Complete. Conceptual understanding of 4-Switch topology solidified. Entering Schematic Capture Phase.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
@@ -265,6 +265,93 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 8 -- August 28, 2026
+
+**Topics Covered:**
+- Deep conceptual synthesis of the 4-Switch Non-Inverting Buck-Boost topology.
+- Mapping theoretical switching states to practical use cases (battery regulation).
+- Architecture exploration: evaluating ESP32-S3 and FPGA as alternative or complementary controllers.
+
+**Key Takeaways:**
+1. **Modular Mental Model of 4-Switch Topology:**
+   The circuit is best understood not as one tangled schematic, but as two half-bridges sharing a common inductor:
+   - **Buck Side (Q1 High-Side, Q2 Low-Side):** Generates the primary switching action. When Q1 is ON, current flows from V_in to charge the inductor (Q2 must be OFF to prevent shoot-through). When Q1 turns OFF, Q2 turns ON, allowing the inductor to act as a temporary power source and release energy toward the output node.
+   - **Boost Side (Q3 High-Side, Q4 Low-Side):** Acts as the secondary stage or pass-through depending on the operating mode.
+
+2. **Mode Logic Truth Table:**
+   | Mode | Q1 | Q2 | Q3 | Q4 | Who Generates Hz | Formula |
+   |------|:---:|:---:|:---:|:---:|:-----------------|:--------|
+   | Buck | 0/1 (PWM) | 0/1 (Comp.) | 0 (OFF) | 1 (ON) | Q1, Q2 | V_out = D * V_in |
+   | Boost | 1 (ON) | 0 (OFF) | 0/1 (PWM) | 0/1 (Comp.) | Q3, Q4 | V_out = V_in / (1 - D) |
+   | Buck-Boost Transition | 0/1 (PWM) | 0/1 (Comp.) | 0/1 (PWM) | 0/1 (Comp.) | All Q | Complex; avoid if possible |
+   - In Buck mode, higher Duty Cycle (longer Q1 ON time) brings V_out closer to V_in.
+   - In Boost mode, higher Duty Cycle (longer Q3 ON time) allows the inductor to store more energy, pushing V_out higher.
+
+3. **Real-World Application Mapping (Battery Regulation):**
+   The primary use case is maintaining a stable output (e.g., 12V) from a varying source like a battery:
+   - Battery at 14V -> Use Buck mode to step down to 12V.
+   - Battery at 10V -> Use Boost mode to step up to 12V.
+   - Battery at 11.2V or 13.1V -> The controller smoothly transitions or uses hysteresis to maintain the 12V target without interruption.
+
+4. **Hysteresis Strategy for Transition Mode:**
+   The Buck-Boost transition mode is inherently complex and difficult to control due to rapid state changes. A practical firmware strategy is to implement a voltage hysteresis band (e.g., strict Buck above 13.5V, strict Boost below 11.5V) to avoid operating in the messy transition zone, thereby simplifying the control logic.
+
+5. **ESP32-S3 Evaluation for Dashboard Control:**
+   - **Pros:** Built-in Wi-Fi/Bluetooth, excellent for IoT dashboards, easy web server implementation.
+   - **Cons:** Noisy ADC (non-linear in some ranges), no hardware Break Input for fast fault protection, PWM generation more complex and prone to jitter under Wi-Fi load.
+   - **Verdict:** Not suitable as the primary Power Stage controller. However, excellent as a secondary Telemetry/Gateway MCU communicating with the primary STM32 via UART/SPI.
+
+6. **FPGA Evaluation:**
+   - **Pros:** True parallel processing, sub-nanosecond dead-time precision, fastest fault response (<100 ns), ideal for high-frequency converters (>500 kHz).
+   - **Cons:** No built-in ADC (requires external), no FPU (requires fixed-point math), very steep learning curve (VHDL/Verilog), high cost (~1000 THB vs ~150 THB for STM32), high power consumption.
+   - **Verdict:** Overkill for this 100 kHz project. Not recommended given the timeline and budget.
+
+7. **Hybrid Architecture (STM32 + CPLD) -- Future Reference:**
+   A middle-ground approach where STM32 handles the main control loop, ADC reading, and communication, while a small CPLD (e.g., Lattice MachXO2, ~200 THB) handles precise dead-time generation, fast fault protection, and PWM synchronization. This combines the best of both worlds but adds complexity.
+
+**Activities:**
+- [x] Synthesized datasheet knowledge into a cohesive mental model of the 4-switch topology.
+- [x] Mapped theoretical switching states to practical battery regulation scenarios.
+- [x] Conducted architecture trade-off analysis: STM32 vs ESP32-S3 vs FPGA vs Hybrid.
+- [x] Documented findings for future reference and potential scope expansion.
+
+**Open Questions:**
+- What is the optimal hysteresis band width for Buck-Boost transition to avoid oscillation?
+- If ESP32-S3 is added later, what communication protocol (UART vs SPI) minimizes latency for telemetry?
+
+**Resources Used:**
+- Personal study notes and conceptual synthesis
+- Instructor-led discussion on architecture trade-offs
+
+---
+
+## Architecture Exploration Log
+
+This section documents alternative architectures and expansion ideas considered during the project, preserved for future reference or scope expansion after the primary prototype is functional.
+
+### Option A: ESP32-S3 as Telemetry Gateway (Recommended Expansion)
+**Concept:** Keep STM32F401 as the primary Power Controller. Add ESP32-S3 as a secondary Telemetry & Gateway MCU.
+**Architecture:** `[Power Stage] <-> [STM32F401] <--UART/SPI--> [ESP32-S3] <--Wi-Fi--> [Web Dashboard]`
+- STM32 retains clean ADC, fast fault response, and stable PWM.
+- ESP32-S3 handles Wi-Fi stack without interfering with power control.
+- Even if Wi-Fi crashes, the power stage continues operating safely.
+**Cons:** Adds ~200 THB to BOM, requires inter-MCU communication protocol design, increases PCB complexity.
+**Recommended Implementation Order:** Get STM32 + OLED working first (primary prototype). Add ESP32-S3 as a bonus feature for the final report.
+
+### Option B: Full FPGA Replacement (Not Recommended)
+**Concept:** Replace STM32 entirely with an FPGA (e.g., Xilinx Artix-7).
+**Pros:** Sub-nanosecond dead-time precision, true parallel processing, ideal for high-frequency converters (>500 kHz).
+**Cons:** No built-in ADC, no FPU, steep learning curve (VHDL/Verilog), high cost (~1000 THB), high power consumption, lacks built-in USB/Ethernet/I2C/SPI.
+**Verdict:** Overkill for a 100 kHz project. Not recommended given the timeline and budget.
+
+### Option C: Hybrid STM32 + CPLD (Middle Ground)
+**Concept:** STM32 handles main control loop and communication; small CPLD (e.g., Lattice MachXO2) handles precise dead-time generation, fast fault protection, and PWM synchronization.
+**Pros:** Combines FPGA-level timing precision with MCU-level flexibility. CPLD cost is modest (~200 THB). Fault response <100 ns (hardware-level).
+**Cons:** Adds design complexity, requires learning basic CPLD development flow. Not necessary for 100 kHz operation (STM32 TIM1 is sufficient).
+**Verdict:** Interesting for future high-frequency projects. Not necessary for this prototype.
+
+---
+
 ## Issues and Solutions Log
 
 | # | Date | Problem | Root Cause | Resolution | Status |
@@ -305,8 +392,8 @@ The learning sequence is designed for someone with a weak foundation who needs t
 | 0 | Circuit Fundamentals | 2026-07-20 | 2026-07-28 | Fully completed. Solid foundation established. |
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
-| 3 | DC-DC Converters | 2026-08-05 | 2026-08-25 | PWM, Buck, Boost, 4-Switch modes understood. Initial simulation attempted, identified need for strict control logic. |
-| 4 | Practical Implementation | 2026-08-11 | - | Datasheets verified. Schematic capture and PCB layout pending. |
+| 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. Initial simulation attempted. |
+| 4 | Practical Implementation | 2026-08-11 | - | Datasheets verified. Architecture options explored. Schematic capture and PCB layout pending. |
 
 ---
 
@@ -347,4 +434,4 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
-*Last updated: August 25, 2026*
+*Last updated: August 28, 2026*
