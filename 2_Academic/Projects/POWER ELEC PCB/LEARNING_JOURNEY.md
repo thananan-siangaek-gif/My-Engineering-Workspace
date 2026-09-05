@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Component Selection Complete. Conceptual understanding of 4-Switch topology solidified. Entering Schematic Capture Phase.
+**Current Status:** Component Selection Complete (MCU upgraded to STM32F411CE). Entering Schematic Capture Phase.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
@@ -47,6 +47,7 @@ The learning sequence is designed for someone with a weak foundation who needs t
 ### Phase 4: Practical Implementation (Week 3-4)
 - [x] Gate drivers: bootstrap circuits, dead-time, shoot-through -- IR2104S selected
 - [x] Reading datasheets (MOSFET, inductor, capacitor) -- verified 4 main components
+- [x] MCU selection finalized: STM32F411CE (upgraded from STM32F401CD)
 - [ ] PCB layout rules (high di/dt loops, grounding strategy)
 - [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks
 
@@ -239,12 +240,12 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 **Topics Covered:**
 - Initial 4-Switch Buck-Boost circuit assembly and open-loop simulation in Proteus.
-- Observing transient response and steady-state behavior with estimated component values (C_IN = C_OUT = 100µF).
+- Observing transient response and steady-state behavior with estimated component values (C_IN = C_OUT = 100uF).
 - Troubleshooting unexpected output voltages (2.44V at 50% duty cycle, 0.41V at 20% duty cycle).
 - Identifying the critical importance of defined control logic (pass-through states) for the inactive half-bridge.
 
 **Key Takeaways:**
-1. **Transient vs. Steady-State:** Initial simulation showed an overshoot to ~10V before settling, highlighting the effect of large capacitance (100µF) on the transient response time. The system takes longer to stabilize but eventually reaches a steady state.
+1. **Transient vs. Steady-State:** Initial simulation showed an overshoot to ~10V before settling, highlighting the effect of large capacitance (100uF) on the transient response time. The system takes longer to stabilize but eventually reaches a steady state.
 2. **Control Logic is King:** Applying a 50% PWM to *both* half-bridges simultaneously resulted in incorrect output (2.44V instead of the expected 6V). In pure Buck mode, the Boost half-bridge must be held in a static "pass-through" state (Q3 ON, Q4 OFF), not actively switched. Failing to define this causes the circuit to behave unpredictably.
 3. **Iterative Troubleshooting:** Reducing the duty cycle to 20% and verifying pin states helped isolate that the high-side MOSFET was likely not turning on properly, pointing towards a need to rigorously verify the bootstrap circuit and logic inputs before proceeding.
 4. **Pause and Calculate:** Recognized that blindly wiring without fully calculating the non-fixed values (like bootstrap capacitor and gate resistors) and defining the exact state machine leads to confusion. It is more efficient to pause, calculate, and define the logic than to guess in simulation.
@@ -279,11 +280,13 @@ The learning sequence is designed for someone with a weak foundation who needs t
    - **Boost Side (Q3 High-Side, Q4 Low-Side):** Acts as the secondary stage or pass-through depending on the operating mode.
 
 2. **Mode Logic Truth Table:**
-   | Mode | Q1 | Q2 | Q3 | Q4 | Who Generates Hz | Formula |
-   |------|:---:|:---:|:---:|:---:|:-----------------|:--------|
-   | Buck | 0/1 (PWM) | 0/1 (Comp.) | 0 (OFF) | 1 (ON) | Q1, Q2 | V_out = D * V_in |
-   | Boost | 1 (ON) | 0 (OFF) | 0/1 (PWM) | 0/1 (Comp.) | Q3, Q4 | V_out = V_in / (1 - D) |
-   | Buck-Boost Transition | 0/1 (PWM) | 0/1 (Comp.) | 0/1 (PWM) | 0/1 (Comp.) | All Q | Complex; avoid if possible |
+
+| Mode | Q1 | Q2 | Q3 | Q4 | Who Generates Hz | Formula |
+|------|:---:|:---:|:---:|:---:|:-----------------|:--------|
+| Buck | 0/1 (PWM) | 0/1 (Comp.) | 0 (OFF) | 1 (ON) | Q1, Q2 | V_out = D * V_in |
+| Boost | 1 (ON) | 0 (OFF) | 0/1 (PWM) | 0/1 (Comp.) | Q3, Q4 | V_out = V_in / (1 - D) |
+| Buck-Boost Transition | 0/1 (PWM) | 0/1 (Comp.) | 0/1 (PWM) | 0/1 (Comp.) | All Q | Complex; avoid if possible |
+
    - In Buck mode, higher Duty Cycle (longer Q1 ON time) brings V_out closer to V_in.
    - In Boost mode, higher Duty Cycle (longer Q3 ON time) allows the inductor to store more energy, pushing V_out higher.
 
@@ -325,29 +328,88 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 9 -- September 5, 2026
+
+**Topics Covered:**
+- MCU re-evaluation and upgrade decision: STM32F401CD -> STM32F411CE.
+- Comparative datasheet analysis between STM32F401 and STM32F411 families.
+- Understanding the significance of Voltage Scaling, ART Accelerator, and Batch Acquisition Mode (BAM).
+- Finalizing the MCU choice for the project BOM.
+
+**Key Takeaways:**
+1. **Why Upgrade to STM32F411CE:**
+   After comparing the STM32F401CD and STM32F411CE datasheets side-by-side, the F411CE offers meaningful advantages for this project without significant cost increase:
+   - **Higher Clock Speed:** 100 MHz vs 84 MHz. This provides more CPU cycles per PWM period (1000 cycles at 100 kHz vs 840 cycles), giving more headroom for the PI control loop, ADC DMA handling, and safety interlock logic.
+   - **More SRAM:** 128 KB vs 96 KB. Extra 32 KB is valuable for DMA double-buffering of ADC samples and future telemetry logging.
+   - **Additional SPI/I2S:** 5 SPIs vs 4 SPIs. Provides more flexibility for future peripheral expansion (e.g., external ADC, SD card logging, or ESP32-S3 telemetry bridge).
+   - **Batch Acquisition Mode (BAM):** A unique power-saving feature that allows DMA to transfer data directly to SRAM while the Flash and ART accelerator are powered down. Useful if battery-powered operation becomes a requirement later.
+   - **Voltage Scale 1:** Supports 100 MHz operation with VOS[1:0] = 0x11, requiring V12 = 1.26-1.38V on VCAP pins.
+   - **Higher I/O Toggle Speed:** Up to 100 MHz vs 84 MHz.
+   - **Higher Junction Temperature:** 130°C vs 125°C (minor but useful margin).
+
+2. **Trade-offs and Considerations:**
+   - **Slightly Higher Power Consumption:** At 100 MHz, typical run current is ~20-21 mA (vs ~16-17 mA at 84 MHz for F401). For a bench-powered converter, this is negligible.
+   - **Pin Compatibility:** The STM32F411CE in UFQFPN48 package is pin-compatible with STM32F401CE, so the PCB footprint remains the same. However, the VCAP capacitor value changes from 4.7uF (F401 single VCAP) to 4.7uF (F411 single VCAP) -- actually the same, but the Voltage Scale 1 requirement means VCAP must maintain 1.26-1.38V at 100 MHz.
+   - **APB1 Clock:** Increased from 42 MHz to 50 MHz. This is beneficial for any future I2C or USART peripherals on APB1.
+   - **Cost:** Price difference is minimal (~10-20 THB), well justified by the performance gain.
+
+3. **Impact on Project Timeline:**
+   - No delay. The STM32F411CE is readily available (e.g., STM32F411CEU6 on Black Pill boards, or UFQFPN48 chips from LCSC/JLCPCB).
+   - STM32CubeIDE fully supports F411 with the same HAL libraries. Code written for F401 TIM1/ADC/DMA is 95% portable to F411.
+   - The decision was made quickly after datasheet comparison, demonstrating improved datasheet literacy compared to Day 5.
+
+4. **Final BOM MCU Specification:**
+   - **Part Number:** STM32F411CEU6 (UFQFPN48, 512KB Flash, 128KB SRAM, 100 MHz)
+   - **Alternative:** STM32F411RET6 (LQFP64) if more GPIOs are needed later.
+   - **Key Peripherals Used:** TIM1 (Advanced Control, 4 complementary PWM channels with dead-time), ADC1 (12-bit, 2.4 MSPS, 16 channels), DMA1/DMA2 (16 streams total), I2C1 (for OLED), USART1 (for debug/ESP32 bridge).
+
+**Mistakes and Lessons Learned:**
+- **Initial Oversight:** Originally selected STM32F401CD based on familiarity and community support (Blue Pill ecosystem) without thoroughly comparing the F411 datasheet. This is another instance of "top-down" thinking -- assuming the first viable option is the best.
+- **Lesson:** Always compare at least 2-3 candidate components in the same family before finalizing. The marginal cost increase often buys significant headroom that prevents redesign later.
+
+**Activities:**
+- [x] Downloaded and reviewed STM32F411xC/xE datasheet (DocID026289 Rev 6).
+- [x] Created side-by-side comparison table of F401 vs F411 key parameters.
+- [x] Verified pin compatibility between STM32F401CE and STM32F411CE (UFQFPN48).
+- [x] Confirmed STM32F411CE availability on JLCPCB and LCSC.
+- [x] Updated project BOM and README to reflect MCU upgrade.
+- [x] Noted Voltage Scale 1 requirement for 100 MHz operation in schematic design checklist.
+
+**Open Questions:**
+- Should the system clock be configured at 100 MHz from day one, or start at 84 MHz (Voltage Scale 2) for initial bring-up stability and ramp up later?
+- For the PI control loop running at 100 kHz, is fixed-point arithmetic sufficient, or should we leverage the F411's FPU for floating-point PID calculations?
+
+**Resources Used:**
+- STM32F411xC/xE Datasheet (STMicroelectronics, DocID026289 Rev 6)
+- STM32F401xC/xE Datasheet (STMicroelectronics, DocID025644 Rev 3) -- for comparison
+- STM32F411 Black Pill board reference schematics
+- JLCPCB Basic Parts library search results
+
+---
+
 ## Architecture Exploration Log
 
 This section documents alternative architectures and expansion ideas considered during the project, preserved for future reference or scope expansion after the primary prototype is functional.
 
 ### Option A: ESP32-S3 as Telemetry Gateway (Recommended Expansion)
-**Concept:** Keep STM32F401 as the primary Power Controller. Add ESP32-S3 as a secondary Telemetry & Gateway MCU.
-**Architecture:** `[Power Stage] <-> [STM32F401] <--UART/SPI--> [ESP32-S3] <--Wi-Fi--> [Web Dashboard]`
+**Concept:** Keep STM32F411CE as the primary Power Controller. Add ESP32-S3 as a secondary Telemetry & Gateway MCU.
+**Architecture:** `[Power Stage] <-> [STM32F411CE] <--UART/SPI--> [ESP32-S3] <--Wi-Fi--> [Web Dashboard]`
 - STM32 retains clean ADC, fast fault response, and stable PWM.
 - ESP32-S3 handles Wi-Fi stack without interfering with power control.
 - Even if Wi-Fi crashes, the power stage continues operating safely.
-**Cons:** Adds ~200 THB to BOM, requires inter-MCU communication protocol design, increases PCB complexity.
+**Cons:** Adds ~200 THB to BOM. Requires inter-MCU communication protocol design. Increases PCB complexity.
 **Recommended Implementation Order:** Get STM32 + OLED working first (primary prototype). Add ESP32-S3 as a bonus feature for the final report.
 
 ### Option B: Full FPGA Replacement (Not Recommended)
 **Concept:** Replace STM32 entirely with an FPGA (e.g., Xilinx Artix-7).
 **Pros:** Sub-nanosecond dead-time precision, true parallel processing, ideal for high-frequency converters (>500 kHz).
-**Cons:** No built-in ADC, no FPU, steep learning curve (VHDL/Verilog), high cost (~1000 THB), high power consumption, lacks built-in USB/Ethernet/I2C/SPI.
+**Cons:** No built-in ADC, no FPU, steep learning curve (VHDL/Verilog), high cost (~1000 THB), high power consumption.
 **Verdict:** Overkill for a 100 kHz project. Not recommended given the timeline and budget.
 
 ### Option C: Hybrid STM32 + CPLD (Middle Ground)
 **Concept:** STM32 handles main control loop and communication; small CPLD (e.g., Lattice MachXO2) handles precise dead-time generation, fast fault protection, and PWM synchronization.
 **Pros:** Combines FPGA-level timing precision with MCU-level flexibility. CPLD cost is modest (~200 THB). Fault response <100 ns (hardware-level).
-**Cons:** Adds design complexity, requires learning basic CPLD development flow. Not necessary for 100 kHz operation (STM32 TIM1 is sufficient).
+**Cons:** Adds design complexity. Requires learning basic CPLD development flow. Not necessary for 100 kHz operation (STM32 TIM1 is sufficient).
 **Verdict:** Interesting for future high-frequency projects. Not necessary for this prototype.
 
 ---
@@ -360,6 +422,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 2 | 2026-08-11 | 100uH Inductor (MSS1260-104ML) had insufficient I_sat (1.88A) | Rigid adherence to calculated theoretical values without checking real-world availability | Pivoted to MSS1260-473ML (47uH, I_sat = 3.38A) and accepted slightly higher ripple | Resolved |
 | 3 | 2026-08-17 | Unclear if STM32 3.3V logic can reliably drive IR2104S | Did not verify logic input thresholds against MCU output levels | Verified V_IH min = 3V for IR2104S; STM32 VOH min is sufficient | Resolved |
 | 4 | 2026-08-25 | Simulation output settled at 2.44V instead of expected 6V (at 50% duty) | Applied PWM to both half-bridges simultaneously instead of using a static pass-through state for the inactive bridge | Paused simulation to define strict state-machine logic for Buck/Boost modes before re-simulating | In Progress |
+| 5 | 2026-09-05 | Initial MCU selection (STM32F401CD) lacked headroom for future features | Selected first familiar option without comparing alternatives in the same family | Upgraded to STM32F411CE after datasheet comparison; gained 100 MHz clock, 128KB SRAM, 5th SPI | Resolved |
 
 ---
 
@@ -383,6 +446,12 @@ This section documents alternative architectures and expansion ideas considered 
 **What should have been done:** Define the exact truth table for Q1-Q4 in Buck mode (e.g., Q3=High, Q4=Low for pass-through) before running the simulation.
 **Lesson learned:** Simulation is only as good as the control logic fed into it. Define the state machine on paper first.
 
+### Mistake #4: Selecting the First Viable MCU Without Comparison
+**What was done:** Chose STM32F401CD based on familiarity (Blue Pill ecosystem) without comparing the STM32F411CE datasheet.
+**Result:** Missed out on 100 MHz clock, 32KB extra SRAM, 5th SPI, and BAM feature that would have provided valuable headroom.
+**What should have been done:** Compare at least 2-3 candidate MCUs in the same family (F401 vs F411 vs F412) before finalizing.
+**Lesson learned:** The marginal cost difference (~10-20 THB) between MCU variants often buys significant performance headroom that prevents redesign later. Always do a quick datasheet comparison before committing.
+
 ---
 
 ## Progress Tracker
@@ -393,7 +462,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
 | 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. Initial simulation attempted. |
-| 4 | Practical Implementation | 2026-08-11 | - | Datasheets verified. Architecture options explored. Schematic capture and PCB layout pending. |
+| 4 | Practical Implementation | 2026-08-11 | - | Datasheets verified. Architecture options explored. MCU upgraded to STM32F411CE. Schematic capture and PCB layout pending. |
 
 ---
 
@@ -403,7 +472,8 @@ This section documents alternative architectures and expansion ideas considered 
 - **IRLZ44N** -- N-Channel Logic Level MOSFET, TO-220 (docs/datasheets/IRLZ44N-MOSFET.pdf)
 - **IR2104S** -- Half-Bridge Gate Driver with 520ns Dead-time, SOIC-8 (docs/datasheets/IR2104(S)-Half-Bridge Gate.PDF)
 - **INA240A2** -- Current Shunt Monitor, 50 V/V Gain, Enhanced PWM Rejection, TSSOP-8 (docs/datasheets/INA240-Current Sensor.PDF)
-- **STM32F401CD** -- ARM Cortex-M4 MCU, 84 MHz, 384KB Flash, 96KB RAM, LQFP-64 (docs/datasheets/STM32F401CD-STM32.PDF)
+- **STM32F411CE** -- ARM Cortex-M4 MCU, 100 MHz, 512KB Flash, 128KB SRAM, UFQFPN48 (docs/datasheets/STM32F411CE-STM32.PDF)
+- **STM32F401CD** -- ARM Cortex-M4 MCU, 84 MHz, 384KB Flash, 96KB SRAM, LQFP-64 (docs/datasheets/STM32F401CD-STM32.PDF) -- kept for reference
 - **MSS1260-473ML** -- Coilcraft Shielded SMT Power Inductor, 47uH, I_sat = 3.38A (docs/datasheets/MSS1260-473ML.pdf)
 
 ### Study Notes
@@ -434,4 +504,4 @@ This section documents alternative architectures and expansion ideas considered 
 
 ---
 
-*Last updated: August 28, 2026*
+*Last updated: September 5, 2026*
