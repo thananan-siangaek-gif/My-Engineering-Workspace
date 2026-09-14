@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Component Selection and Bootstrap Calculations Complete. Debugging Proteus Simulation Control Logic.
+**Current Status:** Proteus Simulation Successful in Both Buck and Boost Modes. Planning PID Control Strategy and Schematic Capture.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
@@ -49,8 +49,9 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - [x] Reading datasheets (MOSFET, inductor, capacitor) -- verified 4 main components
 - [x] MCU selection finalized: STM32F411CE (upgraded from STM32F401CD)
 - [x] Calculating "glue" components (Bootstrap, Bypass, Gate resistors)
+- [x] Proteus simulation: Buck and Boost modes verified (open-loop)
 - [ ] PCB layout rules (high di/dt loops, grounding strategy)
-- [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks
+- [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks, PID control
 
 ---
 
@@ -419,6 +420,81 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 11 -- September 14, 2026
+
+**Topics Covered:**
+- Successful open-loop Proteus simulation of both Buck and Boost modes in the 4-Switch topology.
+- Quantitative analysis of real-world losses and deviations from theoretical calculations.
+- Understanding and characterizing startup overshoot (LC ringing) phenomenon.
+- Strategic planning for closed-loop PID control to compensate for non-ideal component behavior.
+
+**Key Takeaways:**
+1. **Buck Mode Success (Minimal Loss):**
+   - Test condition: $V_{in}$ = 20V, Duty Cycle = 50%
+   - Theoretical $V_{out}$: 10V ($V_{out} = D \times V_{in}$)
+   - Measured $V_{out}$: 9.9V
+   - **Loss: 0.1%** -- This validates that the circuit design, component selection, and control logic are fundamentally correct. The tiny loss is attributed to $R_{DS(on)}$ of MOSFETs and DCR of the inductor.
+
+2. **Boost Mode Challenges (Higher Loss at High $V_{in}$):**
+   - Test condition: $V_{in}$ = 20V, Duty Cycle = 50%
+   - Theoretical $V_{out}$: 40V ($V_{out} = V_{in} / (1 - D)$)
+   - Measured $V_{out}$: 36V
+   - **Loss: ~10%** -- Significantly higher than Buck mode. Root causes:
+     - **Higher inductor current:** $I_L = I_{out} / (1-D) = 2A / 0.5 = 4A$ (double the output current)
+     - **Conduction losses:** $I^2R$ losses in MOSFETs and inductor scale quadratically with current
+     - **Switching losses:** Higher voltage stress on Q3 during turn-off increases switching losses
+     - **Bootstrap limitations:** At high duty cycles, bootstrap capacitor may not fully recharge
+
+3. **Boost Mode at Lower $V_{in}$ (Closer to Target):**
+   - Test condition: $V_{in}$ = 6V, Duty Cycle = 50%
+   - Theoretical $V_{out}$: 12V
+   - Measured $V_{out}$: 11.1V - 11.4V
+   - **Loss: ~5-7.5%** -- More acceptable range. Confirms that the circuit performs better at lower conversion ratios.
+
+4. **Startup Overshoot Phenomenon (LC Ringing):**
+   - Observed voltage spike to 14-15V (Buck) and 40V (Boost) during initial power-on
+   - **Root cause:** The LC filter (47µH inductor + 188µF capacitor bank) forms an underdamped second-order system. When a step input is applied, energy oscillates between the inductor and capacitor before settling.
+   - **Why it's worse in simulation:** Proteus models capacitors with near-zero ESR (Equivalent Series Resistance). In reality, electrolytic capacitors have ESR of 0.1-0.5Ω which provides natural damping.
+   - **Solution in real hardware:** The ESR of actual components will naturally dampen the oscillation. Additionally, a **Soft-Start algorithm** in firmware will gradually ramp up the duty cycle from 0% to target over 10-20ms, preventing the step input that causes ringing.
+
+5. **Real-World Component Limitations:**
+   - Non-ideal components (finite $R_{DS(on)}$, DCR, diode forward voltage, parasitic capacitances) cause deviations from theoretical calculations
+   - This is not a design failure but an expected engineering reality
+   - **Key insight:** Open-loop control cannot maintain precise output voltage under varying load and input conditions. Closed-loop feedback is mandatory.
+
+6. **PID Control Strategy (Next Phase):**
+   - Will implement a digital PID controller in STM32 firmware to:
+     - Compensate for conduction and switching losses
+     - Maintain stable 12V output regardless of $V_{in}$ variations (6-20V)
+     - Handle load transients (0A to 2A step changes)
+   - **Control loop frequency:** 10-20 kHz (slower than switching frequency to allow settling)
+   - **Feedback signals:** $V_{out}$ (via voltage divider) and $I_{out}$ (via INA240A2)
+   - **Anti-windup:** Must implement integral clamping to prevent overshoot during startup or fault conditions
+   - **Hysteresis-based mode switching:** Use voltage bands (e.g., Buck above 13.5V, Boost below 11.5V) to avoid rapid toggling in the transition zone
+
+**Activities:**
+- [x] Ran Buck mode simulation: $V_{in}$ = 20V, Duty = 50% → $V_{out}$ = 9.9V (0.1% loss)
+- [x] Ran Boost mode simulation: $V_{in}$ = 20V, Duty = 50% → $V_{out}$ = 36V (10% loss)
+- [x] Ran Boost mode at lower $V_{in}$: $V_{in}$ = 6V, Duty = 50% → $V_{out}$ = 11.1-11.4V
+- [x] Analyzed startup overshoot and identified LC ringing as root cause
+- [x] Documented real-world loss mechanisms and their impact on performance
+- [x] Designed high-level PID control strategy for firmware implementation
+- [x] Confirmed that open-loop simulation validates circuit topology; closed-loop control needed for precision
+
+**Open Questions:**
+- What is the optimal PID tuning method for this specific power stage? (Ziegler-Nichols vs. manual tuning vs. model-based)
+- Should the PID controller run at fixed 10 kHz, or adapt its frequency based on operating mode?
+- How to implement seamless mode transition (Buck ↔ Boost) without output voltage dip or spike?
+- What is the minimum viable Soft-Start ramp time to balance overshoot suppression and startup speed?
+
+**Resources Used:**
+- Proteus Design Suite (simulation results)
+- IRLZ44N Datasheet ($R_{DS(on)}$ and switching characteristics)
+- MSS1260-473ML Datasheet (DCR = 89 mΩ)
+- Personal analysis notes on LC transient response
+
+---
+
 ## Architecture Exploration Log
 
 This section documents alternative architectures and expansion ideas considered during the project, preserved for future reference or scope expansion after the primary prototype is functional.
@@ -453,9 +529,11 @@ This section documents alternative architectures and expansion ideas considered 
 | 1 | 2026-08-11 | Confused V_GS(max) with V_GS(th) in IRLZ44N Datasheet | Rushed into thermal calculations before understanding basic operating parameters | Clarified that +/-16V is absolute max rating, while 4-5V is the operating condition for low Rds(on) | Resolved |
 | 2 | 2026-08-11 | 100uH Inductor (MSS1260-104ML) had insufficient I_sat (1.88A) | Rigid adherence to calculated theoretical values without checking real-world availability | Pivoted to MSS1260-473ML (47uH, I_sat = 3.38A) and accepted slightly higher ripple | Resolved |
 | 3 | 2026-08-17 | Unclear if STM32 3.3V logic can reliably drive IR2104S | Did not verify logic input thresholds against MCU output levels | Verified V_IH min = 3V for IR2104S; STM32 VOH min is sufficient | Resolved |
-| 4 | 2026-08-25 | Simulation output settled at 2.44V instead of expected 6V (at 50% duty) | Applied PWM to both half-bridges simultaneously instead of using a static pass-through state for the inactive bridge | Paused simulation to define strict state-machine logic for Buck/Boost modes before re-simulating | In Progress |
+| 4 | 2026-08-25 | Simulation output settled at 2.44V instead of expected 6V (at 50% duty) | Applied PWM to both half-bridges simultaneously instead of using a static pass-through state for the inactive bridge | Paused simulation to define strict state-machine logic for Buck/Boost modes before re-simulating | Resolved |
 | 5 | 2026-09-05 | Initial MCU selection (STM32F401CD) lacked headroom for future features | Selected first familiar option without comparing alternatives in the same family | Upgraded to STM32F411CE after datasheet comparison; gained 100 MHz clock, 128KB SRAM, 5th SPI | Resolved |
-| 6 | 2026-09-09 | Proteus simulation output incorrect in Buck mode | Boost side (U2) not configured in static pass-through state (Q3 ON, Q4 OFF) | Need to verify IR2104 truth table and apply correct DC level to IN pin of U2 | In Progress |
+| 6 | 2026-09-09 | Proteus simulation output incorrect in Buck mode | Boost side (U2) not configured in static pass-through state (Q3 ON, Q4 OFF) | Verified IR2104 truth table; applied DC High to IN pin of U2 for pass-through operation | Resolved |
+| 7 | 2026-09-14 | Boost mode shows 10% loss at high V_in (20V → 36V instead of 40V) | Higher inductor current (4A) causes I²R losses in MOSFETs and DCR; switching losses increase with voltage stress | Acceptable for open-loop; will be compensated by closed-loop PID control in firmware | Resolved (mitigated) |
+| 8 | 2026-09-14 | Startup overshoot spikes to 14-40V during simulation | LC filter forms underdamped second-order system; near-zero ESR in simulation models | Real component ESR will dampen; will implement Soft-Start algorithm in firmware | Resolved (mitigated) |
 
 ---
 
@@ -491,6 +569,12 @@ This section documents alternative architectures and expansion ideas considered 
 **What should have been done:** Calculate all passive "glue" components ($C_{boot}$, $C_{bypass}$, $R_g$) using datasheet parameters ($Q_g$, $I_{peak}$) before building the simulation schematic.
 **Lesson learned:** Simulation requires realistic component values. Theoretical power components (L, C_out) are not enough; the gate drive network must be fully dimensioned first.
 
+### Mistake #6: Expecting Open-Loop Simulation to Match Theoretical Calculations Perfectly
+**What was done:** Expected Proteus simulation to produce exact theoretical output voltages (e.g., 12V from 6V boost) without accounting for real-world losses.
+**Result:** Confusion when Boost mode showed 10% loss and startup overshoot occurred.
+**What should have been done:** Anticipate that non-ideal components (Rds(on), DCR, diode Vf) will cause deviations. Plan for closed-loop control from the beginning.
+**Lesson learned:** Open-loop simulation validates topology and control logic, but only closed-loop feedback can achieve precise regulation. Design with PID control in mind from day one.
+
 ---
 
 ## Progress Tracker
@@ -500,8 +584,8 @@ This section documents alternative architectures and expansion ideas considered 
 | 0 | Circuit Fundamentals | 2026-07-20 | 2026-07-28 | Fully completed. Solid foundation established. |
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
-| 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. Initial simulation attempted. |
-| 4 | Practical Implementation | 2026-08-11 | - | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation in progress. |
+| 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. |
+| 4 | Practical Implementation | 2026-08-11 | 2026-09-14 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful in both modes. PID control strategy planned. |
 
 ---
 
@@ -543,4 +627,4 @@ This section documents alternative architectures and expansion ideas considered 
 
 ---
 
-*Last updated: September 9, 2026*
+*Last updated: September 14, 2026*
