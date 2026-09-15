@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Proteus Simulation Successful in Both Buck and Boost Modes. Planning PID Control Strategy and Schematic Capture.
+**Current Status:** Voltage Dividers Designed and Simulated. Preparing for Schematic Capture in EasyEDA.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
@@ -50,6 +50,7 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - [x] MCU selection finalized: STM32F411CE (upgraded from STM32F401CD)
 - [x] Calculating "glue" components (Bootstrap, Bypass, Gate resistors)
 - [x] Proteus simulation: Buck and Boost modes verified (open-loop)
+- [x] Voltage dividers for V_in and V_out sensing designed and simulated
 - [ ] PCB layout rules (high di/dt loops, grounding strategy)
 - [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks, PID control
 
@@ -495,6 +496,50 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 12 -- September 15, 2026
+
+**Topics Covered:**
+- Designing and simulating Voltage Divider circuits for $V_{in}$ and $V_{out}$ sensing.
+- Implementing hardware protection (Zener diode clamping, RC filtering) for STM32 ADC pins.
+- Analyzing the relationship between ADC resolution, divider ratios, and safety margins.
+- Connecting startup overshoot (LC ringing) to the necessity of firmware Soft-Start algorithms.
+
+**Key Takeaways:**
+1. **$V_{in}$ Sensing Circuit Design:**
+   - Target: Measure 6V-20V, with a safety margin up to 24V.
+   - Calculation: To keep max voltage at 24V under 3.0V (leaving 0.3V headroom for 3.3V ADC), ratio is $3.0/24 = 0.125$.
+   - Selected standard values: $R_1 = 75k\Omega$, $R_2 = 10k\Omega$. At 24V, $V_{ADC} \approx 2.82V$.
+   - At minimum $V_{in} = 6V$, $V_{ADC} \approx 0.705V$. For a 12-bit ADC (4096 steps), this yields ~875, which is well within the accurate reading range.
+2. **$V_{out}$ Sensing Circuit Design & Derating:**
+   - Target: Measure 12V nominal, but limit max to 40V to protect IRLZ44N MOSFETs (55V $V_{DSS}$ limit).
+   - Calculation: To keep 40V under 3.0V, ratio is $3.0/40 = 0.075$.
+   - Selected standard values: $R_1 = 130k\Omega$, $R_2 = 10k\Omega$. At 40V, $V_{ADC} \approx 2.85V$.
+3. **Hardware Protection is Mandatory:**
+   - Added a 3.3V Zener Diode and a 100nF capacitor at the output of both dividers.
+   - The Zener clamps any unexpected voltage spikes (e.g., if firmware bugs cause duty cycle to go 100%), protecting the STM32 ADC pin from permanent damage.
+   - The capacitor filters high-frequency switching noise.
+4. **Software Protects, Hardware Saves:**
+   - The severe startup overshoot observed on Sep 14 (LC ringing) can physically push $V_{out}$ beyond 40V momentarily.
+   - Even with a Zener diode, relying solely on hardware clamping is risky. A **Soft-Start algorithm** in the STM32 firmware (gradually ramping up the duty cycle over 10-20ms) is essential to prevent the LC tank from ringing in the first place.
+
+**Activities:**
+- [x] Calculated and simulated $V_{in}$ voltage divider ($75k\Omega / 10k\Omega$) in Proteus.
+- [x] Calculated and simulated $V_{out}$ voltage divider ($130k\Omega / 10k\Omega$) in Proteus.
+- [x] Verified ADC input voltages at min, nominal, and max conditions.
+- [x] Added Zener diode (3.3V) and filter capacitor (100nF) to both sensing circuits in Proteus.
+- [x] Tested overvoltage conditions (up to 40V) to confirm Zener clamping effectiveness.
+
+**Open Questions:**
+- What is the optimal sampling rate for the ADC to balance noise filtering and control loop responsiveness?
+- How to implement the Soft-Start algorithm efficiently without blocking the main control loop?
+
+**Resources Used:**
+- Proteus Design Suite
+- STM32F411CE Datasheet (ADC characteristics)
+- IRLZ44N Datasheet ($V_{DSS}$ rating)
+
+---
+
 ## Architecture Exploration Log
 
 This section documents alternative architectures and expansion ideas considered during the project, preserved for future reference or scope expansion after the primary prototype is functional.
@@ -534,6 +579,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 6 | 2026-09-09 | Proteus simulation output incorrect in Buck mode | Boost side (U2) not configured in static pass-through state (Q3 ON, Q4 OFF) | Verified IR2104 truth table; applied DC High to IN pin of U2 for pass-through operation | Resolved |
 | 7 | 2026-09-14 | Boost mode shows 10% loss at high V_in (20V → 36V instead of 40V) | Higher inductor current (4A) causes I²R losses in MOSFETs and DCR; switching losses increase with voltage stress | Acceptable for open-loop; will be compensated by closed-loop PID control in firmware | Resolved (mitigated) |
 | 8 | 2026-09-14 | Startup overshoot spikes to 14-40V during simulation | LC filter forms underdamped second-order system; near-zero ESR in simulation models | Real component ESR will dampen; will implement Soft-Start algorithm in firmware | Resolved (mitigated) |
+| 9 | 2026-09-15 | ADC pins vulnerable to voltage spikes and startup overshoot | LC ringing and firmware bugs could push voltage beyond 3.3V | Added 3.3V Zener diode and 100nF cap to dividers; planned Soft-Start firmware algorithm | Resolved |
 
 ---
 
@@ -585,7 +631,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
 | 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. |
-| 4 | Practical Implementation | 2026-08-11 | 2026-09-14 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful in both modes. PID control strategy planned. |
+| 4 | Practical Implementation | 2026-08-11 | 2026-09-15 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. |
 
 ---
 
@@ -627,4 +673,4 @@ This section documents alternative architectures and expansion ideas considered 
 
 ---
 
-*Last updated: September 14, 2026*
+*Last updated: September 15, 2026*
