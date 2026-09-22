@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Voltage Dividers Designed and Simulated. Preparing for Schematic Capture in EasyEDA.
+**Current Status:** Schematic Capture in Progress. INA240A2 deferred to external module; Kelvin test nodes added to PCB design to unblock progress.
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
@@ -51,7 +51,8 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - [x] Calculating "glue" components (Bootstrap, Bypass, Gate resistors)
 - [x] Proteus simulation: Buck and Boost modes verified (open-loop)
 - [x] Voltage dividers for V_in and V_out sensing designed and simulated
-- [ ] PCB layout rules (high di/dt loops, grounding strategy)
+- [x] Strategic pivot: INA240A2 deferred to external breakout module; Kelvin test nodes planned for PCB
+- [ ] PCB layout rules (high di/dt loops, grounding strategy, Kelvin routing)
 - [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks, PID control
 
 ---
@@ -540,6 +541,37 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 13 -- September 22, 2026
+
+**Topics Covered:**
+- Attempted to simulate INA240A2 current sensing in LTspice.
+- Encountered severe roadblocks with SPICE model compatibility and library imports.
+- Strategic pivot: Decided to remove the INA240A2 from the main PCB design to unblock progress.
+- Designed Kelvin connection test nodes for the shunt resistor to allow external module testing later.
+
+**Key Takeaways:**
+1. **Tooling Frustration vs. Project Goals:** Spent 4 hours fighting LTspice library imports for the INA240A2. Realized that getting bogged down in simulation tool issues was derailing the primary goal of completing the schematic and PCB layout.
+2. **Pragmatic Pivoting (Divide and Conquer):** Decided to remove the INA240A2 from the main PCB. Instead, the PCB will feature dedicated, properly routed Kelvin test nodes for the 10mΩ shunt resistor. This allows an off-the-shelf INA240A2 breakout module to be connected externally for testing and validation.
+3. **Importance of Kelvin Connections:** Even for test nodes, proper 4-wire (Kelvin) routing is critical. The sense traces must be routed directly from the inner pads of the shunt resistor footprint, separate from the high-current power traces, to avoid measuring the voltage drop of the PCB traces and solder joints.
+4. **"Done is Better Than Perfect":** Waiting for a perfect simulation is a trap. Building the physical board with test points allows for real-world validation, which is ultimately more valuable than a finicky simulation.
+
+**Activities:**
+- [x] Attempted INA240A2 SPICE model import in LTspice (unsuccessful after 4 hours).
+- [x] Made the strategic decision to defer INA240A2 integration to an external module.
+- [x] Updated the EasyEDA schematic plan to include 4-wire Kelvin test nodes for the current shunt.
+- [x] Regained momentum to proceed with the main 4-switch power stage schematic capture.
+
+**Open Questions:**
+- What is the best off-the-shelf INA240A2 breakout module for prototyping?
+- How to ensure the external module's ground reference aligns perfectly with the PCB's low-side shunt reference?
+
+**Resources Used:**
+- LTspice (attempted)
+- INA240A2 Datasheet (for Kelvin connection guidelines)
+- Personal project management and prioritization
+
+---
+
 ## Architecture Exploration Log
 
 This section documents alternative architectures and expansion ideas considered during the project, preserved for future reference or scope expansion after the primary prototype is functional.
@@ -580,6 +612,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 7 | 2026-09-14 | Boost mode shows 10% loss at high V_in (20V → 36V instead of 40V) | Higher inductor current (4A) causes I²R losses in MOSFETs and DCR; switching losses increase with voltage stress | Acceptable for open-loop; will be compensated by closed-loop PID control in firmware | Resolved (mitigated) |
 | 8 | 2026-09-14 | Startup overshoot spikes to 14-40V during simulation | LC filter forms underdamped second-order system; near-zero ESR in simulation models | Real component ESR will dampen; will implement Soft-Start algorithm in firmware | Resolved (mitigated) |
 | 9 | 2026-09-15 | ADC pins vulnerable to voltage spikes and startup overshoot | LC ringing and firmware bugs could push voltage beyond 3.3V | Added 3.3V Zener diode and 100nF cap to dividers; planned Soft-Start firmware algorithm | Resolved |
+| 10 | 2026-09-22 | LTspice INA240A2 model import failed after 4 hours | SPICE model compatibility issues and library conflicts | Decided to remove INA240A2 from main PCB; will use external breakout module connected to dedicated Kelvin test nodes | Resolved (Pivoted) |
 
 ---
 
@@ -621,6 +654,12 @@ This section documents alternative architectures and expansion ideas considered 
 **What should have been done:** Anticipate that non-ideal components (Rds(on), DCR, diode Vf) will cause deviations. Plan for closed-loop control from the beginning.
 **Lesson learned:** Open-loop simulation validates topology and control logic, but only closed-loop feedback can achieve precise regulation. Design with PID control in mind from day one.
 
+### Mistake #7: Getting Bogged Down in Tooling Issues
+**What was done:** Spent 4 hours trying to force an INA240A2 SPICE model to work in LTspice, leading to extreme frustration and zero progress on the actual schematic.
+**Result:** Wasted time, loss of momentum, and unnecessary stress.
+**What should have been done:** Set a strict timebox (e.g., 1 hour) for tool troubleshooting. If unsuccessful, pivot to a pragmatic alternative (like using a generic op-amp model or deferring to physical testing with a breakout module).
+**Lesson learned:** "Perfect is the enemy of done." Simulation tools are meant to aid the design process, not become the bottleneck. Pragmatic pivoting (like using external test modules) is a valid and often superior engineering strategy to unblock progress.
+
 ---
 
 ## Progress Tracker
@@ -631,7 +670,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
 | 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. |
-| 4 | Practical Implementation | 2026-08-11 | 2026-09-15 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. |
+| 4 | Practical Implementation | 2026-08-11 | 2026-09-22 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. INA240A2 deferred to external module; Kelvin test nodes planned. |
 
 ---
 
@@ -673,4 +712,4 @@ This section documents alternative architectures and expansion ideas considered 
 
 ---
 
-*Last updated: September 15, 2026*
+*Last updated: September 22, 2026*
