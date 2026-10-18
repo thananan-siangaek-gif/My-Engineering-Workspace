@@ -53,7 +53,7 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - [x] Voltage dividers for V_in and V_out sensing designed and simulated
 - [x] Strategic pivot: INA240A2 deferred to external breakout module; Kelvin test nodes planned for PCB
 - [x] PCB layout completed in EasyEDA (including GND Copper Pour)
-- [ ] PCB layout rules (high di/dt loops, grounding strategy, Kelvin routing)
+- [x] PCB layout rules (high di/dt loops, grounding strategy, Kelvin routing)
 - [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks, PID control
 
 ---
