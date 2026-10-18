@@ -9,7 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** Schematic Capture in Progress. INA240A2 deferred to external module; Kelvin test nodes added to PCB design to unblock progress.
+**Current Status:** PCB Layout Complete in EasyEDA. Awaiting team decision on delivery method (PCB vs. breadboard).
 **Started:** July 20, 2026
 **Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
@@ -52,6 +52,7 @@ The learning sequence is designed for someone with a weak foundation who needs t
 - [x] Proteus simulation: Buck and Boost modes verified (open-loop)
 - [x] Voltage dividers for V_in and V_out sensing designed and simulated
 - [x] Strategic pivot: INA240A2 deferred to external breakout module; Kelvin test nodes planned for PCB
+- [x] PCB layout completed in EasyEDA (including GND Copper Pour)
 - [ ] PCB layout rules (high di/dt loops, grounding strategy, Kelvin routing)
 - [ ] STM32 firmware: PWM generation, ADC with DMA, safety interlocks, PID control
 
@@ -310,7 +311,7 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 6. **FPGA Evaluation:**
    - **Pros:** True parallel processing, sub-nanosecond dead-time precision, fastest fault response (<100 ns), ideal for high-frequency converters (>500 kHz).
-   - **Cons:** No built-in ADC (requires external), no FPU (requires fixed-point math), very steep learning curve (VHDL/Verilog), high cost (~1000 THB vs ~150 THB for STM32), high power consumption.
+   - **Cons:** No built-in ADC, no FPU, steep learning curve (VHDL/Verilog), high cost (~1000 THB vs ~150 THB for STM32), high power consumption.
    - **Verdict:** Overkill for this 100 kHz project. Not recommended given the timeline and budget.
 
 7. **Hybrid Architecture (STM32 + CPLD) -- Future Reference:**
@@ -572,6 +573,45 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 14 -- September 22, 2026
+
+**Topics Covered:**
+- EasyEDA PCB Layout completion for the 4-Switch Buck-Boost converter.
+- Discovery and utilization of EasyEDA features: component selection workflow, Auto Route, and Copper Pour.
+- GND plane implementation and learning the proper Copper Pour workflow.
+- Project delivery strategy discussion: PCB fabrication vs. breadboard prototype for group submission.
+- Reflection on topology choice (4-Switch) and long-term project vision.
+
+**Key Takeaways:**
+1. **PCB Layout is Less Intimidating Than Expected:** The learning curve for PCB layout in EasyEDA was gentler than anticipated. The tool's integrated component library and footprint management significantly streamline the workflow compared to manually searching for footprints online.
+2. **Component Selection in EasyEDA is Superior:** Selecting components directly from the EasyEDA/JLCPCB library from the beginning of the design process is far more efficient than searching for external footprints. It ensures schematic-to-PCB consistency and avoids footprint mismatch issues.
+3. **Auto Route is a Double-Edged Sword:** Discovered the Auto Route feature in EasyEDA. While useful for initial routing exploration, manual verification of high-current paths (especially high di/dt loops and gate drive traces) and DRC (Design Rule Check) remains essential for power electronics designs.
+4. **GND Copper Pour is Essential and Straightforward:** Learned the proper workflow for implementing a GND plane using Copper Pour in EasyEDA:
+   - Remove manual GND traces.
+   - Use the Copper Pour tool to draw a polygon covering the desired area.
+   - Assign the Net to "GND" and rebuild.
+   - The process is simpler than expected and dramatically improves ground return paths, thermal dissipation, and EMI shielding.
+5. **Topology Choice Reflection:** Initially chose the 4-Switch Buck-Boost topology under the misconception that it was the "only" DC-DC converter option. Later realized it is one of the most complex topologies. However, tackling this challenge head-on forced a deeper, first-principles understanding of power electronics, making the learning outcome far more valuable than starting with a simpler topology.
+6. **Pragmatic Project Management:** Took on the majority of the technical design work independently to maintain quality, avoid knowledge-transfer bottlenecks within the group, and ensure project completion. This decision was based on a realistic assessment of team dynamics and the tight timeline.
+7. **Team Alignment & Adaptability:** Before finalizing the PCB order, will consult the team to decide between proceeding with the PCB or falling back to a breadboard prototype. This accounts for the professor's budget-saving suggestion and the delays caused by the recent flooding. The PCB design files serve as "Proof of Work" demonstrating advanced capability regardless of the final delivery method.
+8. **Future Scope:** Upon submission of this group project, the 4-Switch Buck-Boost design will be transitioned into a personal long-term project for further refinement (e.g., adding PID control, telemetry, and optimized PCB revisions).
+
+**Activities:**
+- [x] Completed Schematic Capture in EasyEDA.
+- [x] Completed PCB Layout, including successful implementation of GND Copper Pour.
+- [x] Verified component footprints and DRC (Design Rule Check).
+- [x] Formulated delivery options (PCB order vs. Breadboard prototype) for team discussion.
+
+**Open Questions:**
+- Will the team agree to proceed with the PCB order, or opt for the breadboard prototype to save costs and time?
+- How to smoothly transition the project from a group submission to a personal portfolio piece post-deadline?
+
+**Resources Used:**
+- EasyEDA (Schematic & PCB Editor)
+- Team discussion and project requirement guidelines
+
+---
+
 ## Architecture Exploration Log
 
 This section documents alternative architectures and expansion ideas considered during the project, preserved for future reference or scope expansion after the primary prototype is functional.
@@ -670,7 +710,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
 | 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. |
-| 4 | Practical Implementation | 2026-08-11 | 2026-09-22 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. INA240A2 deferred to external module; Kelvin test nodes planned. |
+| 4 | Practical Implementation | 2026-08-11 | 2026-09-22 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. INA240A2 deferred to external module; Kelvin test nodes planned. PCB layout completed in EasyEDA. |
 
 ---
 
