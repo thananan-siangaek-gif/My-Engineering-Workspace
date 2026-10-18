@@ -573,7 +573,7 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
-### Day 14 -- September 22, 2026
+### Day 14 -- October 18, 2026
 
 **Topics Covered:**
 - EasyEDA PCB Layout completion for the 4-Switch Buck-Boost converter.
@@ -652,7 +652,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 7 | 2026-09-14 | Boost mode shows 10% loss at high V_in (20V → 36V instead of 40V) | Higher inductor current (4A) causes I²R losses in MOSFETs and DCR; switching losses increase with voltage stress | Acceptable for open-loop; will be compensated by closed-loop PID control in firmware | Resolved (mitigated) |
 | 8 | 2026-09-14 | Startup overshoot spikes to 14-40V during simulation | LC filter forms underdamped second-order system; near-zero ESR in simulation models | Real component ESR will dampen; will implement Soft-Start algorithm in firmware | Resolved (mitigated) |
 | 9 | 2026-09-15 | ADC pins vulnerable to voltage spikes and startup overshoot | LC ringing and firmware bugs could push voltage beyond 3.3V | Added 3.3V Zener diode and 100nF cap to dividers; planned Soft-Start firmware algorithm | Resolved |
-| 10 | 2026-09-22 | LTspice INA240A2 model import failed after 4 hours | SPICE model compatibility issues and library conflicts | Decided to remove INA240A2 from main PCB; will use external breakout module connected to dedicated Kelvin test nodes | Resolved (Pivoted) |
+| 10 | 2026-10-18 | LTspice INA240A2 model import failed after 4 hours | SPICE model compatibility issues and library conflicts | Decided to remove INA240A2 from main PCB; will use external breakout module connected to dedicated Kelvin test nodes | Resolved (Pivoted) |
 
 ---
 
@@ -710,7 +710,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
 | 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. |
-| 4 | Practical Implementation | 2026-08-11 | 2026-09-22 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. INA240A2 deferred to external module; Kelvin test nodes planned. PCB layout completed in EasyEDA. |
+| 4 | Practical Implementation | 2026-08-11 | 2026-10-18 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. INA240A2 deferred to external module; Kelvin test nodes planned. PCB layout completed in EasyEDA. |
 
 ---
 
@@ -752,4 +752,4 @@ This section documents alternative architectures and expansion ideas considered 
 
 ---
 
-*Last updated: September 22, 2026*
+**Last updated: October 18, 2026**
