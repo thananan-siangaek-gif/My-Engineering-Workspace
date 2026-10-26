@@ -9,8 +9,7 @@ This document records the developer's learning journey from having no prior know
 - Document encountered problems and their resolutions to avoid repeating mistakes.
 - Create a reference for personal review and for others interested in the subject.
 
-**Current Status:** PCB Layout Complete in EasyEDA. Awaiting team decision on delivery method (PCB vs. breadboard).
-**Started:** July 20, 2026
+**Current Status:** Schematic & PCB Redesign v2 Complete. BOM Finalized. Awaiting Parts for Hand-Soldering and Bring-up.** October 18, 2026*
 **Target Deadline:** August 17, 2026 (Mock deadline used as planning stress-test; actual university deadline: November 1, 2026)
 
 ---
@@ -612,6 +611,41 @@ The learning sequence is designed for someone with a weak foundation who needs t
 
 ---
 
+### Day 15 -- October 27, 2026
+
+**Topics Covered:**
+- PCB Redesign strategy and shifting from Fixed 12V to Variable Output (5V-24V).
+- Peer review insights: 12V Regulator (7812) for Bootstrap, External Crystal, Thermal Vias, ACS712 Module Hack.
+- BOM Finalization and Sourcing Strategy (LCSC + Shopee + Module Hacks).
+- Defining the External Dashboard Interface (20-Pin Header for ESP32).
+- Final Thermal Analysis and Input Range Adjustment (Vin 12-24V).
+
+**Key Takeaways:**
+1. **Power Architecture Simplification:** Using a cheap 12V Linear Regulator (7812, Input 0-30V) to power the IR2104S VCC and AMS1117-3.3 simplifies the design and ensures stable gate drive regardless of V_in fluctuations.
+2. **Thermal Reality Check at 30kHz:** Initially planned V_in = 5-24V. However, stepping down from 24V to 5V at 30kHz causes extreme Duty Cycle stress and massive thermal dissipation. Adjusted V_in Operating Range to **12V - 24V**. This keeps the circuit in a "Sweet Spot" (Duty Cycle 0.5 - 0.8), ensuring components stay cool.
+3. **Variable Output Strategy:** Shifting from a fixed 12V regulator to a variable 5V-24V output (Hardware limit 30V) makes the project more versatile and demonstrates closed-loop control capabilities.
+4. **External Dashboard via 20-Pin Header:** To avoid EasyEDA's 5-piece MOQ for displays, designed a 20-pin header to separate the noisy Power Stage from the UI/Control logic. An external ESP32 Dev Board will handle the Web Dashboard via UART/SPI.
+5. **Maker Hacks for Cost Saving:** Buying an ACS712 current sensor module and desoldering the IC is often cheaper than buying the bare IC. 
+6. **Component Upgrades:** Inductor upgraded to **ZE065125T470M-LS1L** (47uH, 10A Isat, 12mΩ DCR) to handle high ripple currents safely at 30kHz.
+
+**Activities:**
+- [x] Consulted with senior peer for design review and thermal analysis.
+- [x] Adjusted V_in spec to 12-24V based on thermal calculations.
+- [x] Compiled final BOM with specific LCSC Part Numbers and Shopee links.
+- [x] Finalized 20-pin header pinout mapping (3.3V, 5V, IN_GD1/2, SD_GD1/2, ADCin, ADCout, IOUT_SENSE, GND).
+- [x] Completed final PCB layout v2 checks (DRC, Copper Pour, Thermal Vias).
+
+**Open Questions:**
+- How to implement the Soft-Start algorithm efficiently in the STM32 firmware without blocking the main control loop?
+- What is the optimal PID tuning method for this specific power stage at 30kHz?
+
+**Resources Used:**
+- EasyEDA (Schematic & PCB Editor v2)
+- LCSC & Shopee (Component Sourcing)
+- Peer discussion and thermal calculation guidelines
+
+---
+
 ## Architecture Exploration Log
 
 This section documents alternative architectures and expansion ideas considered during the project, preserved for future reference or scope expansion after the primary prototype is functional.
@@ -653,7 +687,8 @@ This section documents alternative architectures and expansion ideas considered 
 | 8 | 2026-09-14 | Startup overshoot spikes to 14-40V during simulation | LC filter forms underdamped second-order system; near-zero ESR in simulation models | Real component ESR will dampen; will implement Soft-Start algorithm in firmware | Resolved (mitigated) |
 | 9 | 2026-09-15 | ADC pins vulnerable to voltage spikes and startup overshoot | LC ringing and firmware bugs could push voltage beyond 3.3V | Added 3.3V Zener diode and 100nF cap to dividers; planned Soft-Start firmware algorithm | Resolved |
 | 10 | 2026-10-18 | LTspice INA240A2 model import failed after 4 hours | SPICE model compatibility issues and library conflicts | Decided to remove INA240A2 from main PCB; will use external breakout module connected to dedicated Kelvin test nodes | Resolved (Pivoted) |
-
+| 11 | 2026-10-27 | Gate driver unstable at low V_in | V_in < 8.9V (IR2104 UVLO) | Added 7812 12V regulator for VCC | Resolved (Hardware) |
+| 12 | 2026-10-27 | Thermal stress at 30kHz (24V->5V) | Extreme duty cycle & ripple | Adjusted V_in range to 12-24V | Resolved (Spec Change) |
 ---
 
 ## Mistakes Log
@@ -700,6 +735,10 @@ This section documents alternative architectures and expansion ideas considered 
 **What should have been done:** Set a strict timebox (e.g., 1 hour) for tool troubleshooting. If unsuccessful, pivot to a pragmatic alternative (like using a generic op-amp model or deferring to physical testing with a breakout module).
 **Lesson learned:** "Perfect is the enemy of done." Simulation tools are meant to aid the design process, not become the bottleneck. Pragmatic pivoting (like using external test modules) is a valid and often superior engineering strategy to unblock progress.
 
+### Mistake #8: Overly Ambitious Input Range
+**What was done:** Initially planned V_in = 5-24V for a 5-24V output at 30kHz.
+**Result:** Calculated extreme thermal dissipation and ripple currents that would overwhelm the 7812 and MOSFETs.
+**Lesson:** Always cross-reference theoretical ranges with thermal limits and switching frequency constraints. Narrowing the range to 12-24V ensures reliability.
 ---
 
 ## Progress Tracker
@@ -710,7 +749,7 @@ This section documents alternative architectures and expansion ideas considered 
 | 1 | Semiconductor Basics | 2026-07-24 | 2026-08-11 | Diode LAB complete. MOSFET and Gate Driver verified via datasheets. |
 | 2 | Energy Storage (L, C) | 2026-08-05 | 2026-08-11 | Sizing, ripple trade-offs, and selection criteria understood. Inductor pivoted to 47uH. |
 | 3 | DC-DC Converters | 2026-08-05 | 2026-08-28 | PWM, Buck, Boost, 4-Switch modes understood. Conceptual synthesis complete. |
-| 4 | Practical Implementation | 2026-08-11 | 2026-10-18 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. INA240A2 deferred to external module; Kelvin test nodes planned. PCB layout completed in EasyEDA. |
+| 4 | Practical Impl. & Redesign | 2026-08-11 | 2026-10-27 | Datasheets verified. MCU upgraded. Bootstrap calculated. Proteus simulation successful. Voltage dividers designed. INA240A2 deferred to external module; Kelvin test nodes planned. PCB v2 Complete. BOM Finalized.|
 
 ---
 
@@ -752,4 +791,4 @@ This section documents alternative architectures and expansion ideas considered 
 
 ---
 
-**Last updated: October 18, 2026**
+**Last updated: October 27, 2026**
